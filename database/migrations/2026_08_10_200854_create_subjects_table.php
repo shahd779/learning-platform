@@ -12,15 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('subjects', function (Blueprint $table) {
-        $table->id();
-        $table->string('name'); // اسم المادة
-        $table->string('code')->unique(); // كود المادة اللي هيدخله الطالب
-        $table->text('description')->nullable();
-        $table->string('image')->nullable(); // صورة المادة
-        $table->foreignId('teacher_id')->constrained('users')->onDelete('cascade');
-        $table->foreignId('grade_id')->constrained()->onDelete('cascade');
-        $table->boolean('is_active')->default(true);
-        $table->timestamps();
+       $table->id();
+    $table->string('name'); // "رياضيات"
+    $table->string('code')->unique(); // "MATH101" (المفتاح الأساسي)
+    $table->text('description')->nullable();
+    $table->foreignId('grade_id')->constrained()->onDelete('cascade'); // الصف
+    $table->foreignId('teacher_id')->constrained('users')->onDelete('cascade'); // المدرس
+    $table->boolean('is_active')->default(true);
+    $table->timestamps();
+    
+    // منع تكرار نفس المادة لنفس المدرس في نفس الصف
+    $table->unique(['name', 'grade_id', 'teacher_id']);
         });
     }
 

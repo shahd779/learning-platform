@@ -15,8 +15,6 @@ return new class extends Migration
         $table->id();
         $table->string('name'); // مثلاً: "الصف الأول الثانوي"
         $table->string('code')->unique(); // كود الصف
-        $table->text('description')->nullable();
-        $table->foreignId('teacher_id')->nullable()->constrained('users')->onDelete('set null');
         $table->timestamps();
         });
     }

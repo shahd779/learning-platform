@@ -13,7 +13,7 @@ class AdminUserSeeder extends Seeder
     {
         User::create([
             'name' => 'Admin',
-            'phone' => '01012345678',
+            'phone' => '01000000000',
             'password' => Hash::make('123456'),
             'role' => 'admin',
             'is_active' => true,

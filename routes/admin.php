@@ -26,5 +26,19 @@ Route::prefix('admin')->group(function () {
         // ===== Auth =====
         Route::post('/logout', [AuthController::class, 'logout']);
 
+
+          // ===== Users Management =====
+        Route::post('/users', [UserController::class, 'store']);
+        Route::put('/users/{user}', [UserController::class, 'update']);
+        Route::delete('/users/{user}', [UserController::class, 'destroy']);
+        Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus']);
+
+
+        Route::get('/stats', [UserController::class, 'stats']);
+        Route::get('/users', [UserController::class, 'index']);
+        Route::get('/filter-options', [UserController::class, 'filterOptions']);   
+
+
+
     });
 });
