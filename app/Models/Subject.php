@@ -14,8 +14,6 @@ class Subject extends Model
         'code',
         'description',
         'image',
-        'teacher_id',
-        'grade_id',
         'is_active',
     ];
 
@@ -23,28 +21,30 @@ class Subject extends Model
         'is_active' => 'boolean',
     ];
 
-    public function teacher()
+    public function teachers()
     {
-        return $this->belongsTo(User::class, 'teacher_id');
+        return $this->belongsToMany(User::class, 'teacher_subject_grade', 'subject_id', 'teacher_id')
+                    ->withPivot('grade_id', 'access_code', 'is_active')
+                    ->withTimestamps();
     }
 
-    public function grade()
+    public function grades()
     {
-        return $this->belongsTo(Grade::class);
+        return $this->belongsToMany(Grade::class, 'teacher_subject_grade', 'subject_id', 'grade_id')
+                    ->withPivot('teacher_id', 'access_code', 'is_active')
+                    ->withTimestamps();
     }
 
     public function subscriptions()
     {
-        return $this->hasMany(Subscription::class);
+        return $this->hasMany(StudentSubscription::class);
     }
 
-    public function contents()
-{
-    return $this->hasMany(Content::class)->orderBy('order');
-}
-
-public function packages()
-{
-    return $this->hasMany(Package::class);
-}
+    public function getImageUrlAttribute()
+    {
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+        return null;
+    }
 }

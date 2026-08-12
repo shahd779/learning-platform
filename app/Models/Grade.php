@@ -17,11 +17,15 @@ class Grade extends Model
 
     public function subjects()
     {
-        return $this->hasMany(Subject::class);
+        return $this->belongsToMany(Subject::class, 'teacher_subject_grade', 'grade_id', 'subject_id')
+                    ->withPivot('teacher_id', 'access_code', 'is_active')
+                    ->withTimestamps();
     }
 
-    public function teacher()
+    public function teachers()
     {
-        return $this->belongsTo(User::class, 'teacher_id');
+        return $this->belongsToMany(User::class, 'teacher_subject_grade', 'grade_id', 'teacher_id')
+                    ->withPivot('subject_id', 'access_code', 'is_active')
+                    ->withTimestamps();
     }
 }

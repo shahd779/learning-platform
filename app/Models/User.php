@@ -7,42 +7,27 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // مهم للـ API
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens; // أضفنا HasApiTokens
+    use HasFactory, Notifiable, HasApiTokens;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
-        'phone', // أضفنا phone
+        'email',
+        'phone',
         'password',
         'image',
         'role',
         'is_active',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -52,94 +37,89 @@ class User extends Authenticatable
         ];
     }
 
-    // ============= العلاقات =============
+    // ============= العلاقات الأساسية =============
 
     /**
-     * العلاقة مع المواد (المدرس)
+     * المواد اللي المدرس بيدرسها (عن طريق جدول teacher_subject_grade)
+     */
+    public function teacherSubjects()
+    {
+        return $this->hasMany(TeacherSubjectGrade::class, 'teacher_id');
+    }
+
+    /**
+     * المواد اللي المدرس بيدرسها (مباشر)
      */
     public function subjects()
     {
-        return $this->hasMany(Subject::class, 'teacher_id');
+        return $this->belongsToMany(Subject::class, 'teacher_subject_grade', 'teacher_id', 'subject_id')
+                    ->withPivot('grade_id', 'access_code', 'is_active')
+                    ->withTimestamps();
     }
 
     /**
-     * العلاقة مع الاشتراكات (الطالب)
-     */
-    public function subscriptions()
-    {
-        return $this->hasMany(Subscription::class, 'student_id');
-    }
-
-    /**
-     * العلاقة مع الصفوف (المدرس)
+     * الصفوف اللي المدرس بيدرس فيها
      */
     public function grades()
     {
-        return $this->hasMany(Grade::class, 'teacher_id');
+        return $this->belongsToMany(Grade::class, 'teacher_subject_grade', 'teacher_id', 'grade_id')
+                    ->withPivot('subject_id', 'access_code', 'is_active')
+                    ->withTimestamps();
+    }
+
+    /**
+     * الاشتراكات (للطلاب)
+     */
+    public function subscriptions()
+    {
+        return $this->hasMany(StudentSubscription::class, 'student_id');
+    }
+
+    /**
+     * المواد اللي الطالب مشترك فيها
+     */
+    public function enrolledSubjects()
+    {
+        return $this->belongsToMany(Subject::class, 'student_subscriptions', 'student_id', 'teacher_subject_grade_id')
+                    ->withPivot('status', 'subscribed_at', 'expires_at')
+                    ->withTimestamps();
+    }
+
+    /**
+     * طلبات المدرس
+     */
+    public function teacherRequests()
+    {
+        return $this->hasMany(TeacherRequest::class, 'teacher_id');
     }
 
     // ============= Helper Methods =============
 
-    /**
-     * التحقق من أن المستخدم أدمن
-     */
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
     }
 
-    /**
-     * التحقق من أن المستخدم مدرس
-     */
     public function isTeacher(): bool
     {
         return $this->role === 'teacher';
     }
 
-    /**
-     * التحقق من أن المستخدم طالب
-     */
     public function isStudent(): bool
     {
         return $this->role === 'student';
     }
 
-    /**
-     * التحقق من أن الحساب نشط
-     */
     public function isActive(): bool
     {
         return $this->is_active;
     }
 
-    /**
-     * جلب صورة المستخدم (مع رابط كامل)
-     */
     public function getImageUrlAttribute(): string
     {
         if ($this->image) {
             return asset('storage/' . $this->image);
         }
-        return asset('images/default-avatar.png'); // صورة افتراضية
+        return asset('images/default-avatar.png');
     }
-
-    public function assignments()
-{
-    return $this->hasMany(Assignment::class, 'student_id');
-}
-
-public function examResults()
-{
-    return $this->hasMany(ExamResult::class, 'student_id');
-}
-
-public function videoProgress()
-{
-    return $this->hasMany(VideoProgress::class, 'student_id');
-}
-
-public function teachingContents()
-{
-    return $this->hasManyThrough(Content::class, Subject::class, 'teacher_id');
-}
 }

@@ -23,41 +23,26 @@ class TeacherSubjectGrade extends Model
         'is_active' => 'boolean',
     ];
 
-    /**
-     * العلاقة مع المدرس
-     */
     public function teacher()
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
 
-    /**
-     * العلاقة مع المادة
-     */
     public function subject()
     {
         return $this->belongsTo(Subject::class);
     }
 
-    /**
-     * العلاقة مع الصف
-     */
     public function grade()
     {
         return $this->belongsTo(Grade::class);
     }
 
-    /**
-     * الطلاب المشتركين في هذه المادة
-     */
     public function subscriptions()
     {
         return $this->hasMany(StudentSubscription::class, 'teacher_subject_grade_id');
     }
 
-    /**
-     * عدد الطلاب المشتركين
-     */
     public function studentsCount()
     {
         return $this->subscriptions()->where('status', 'active')->count();

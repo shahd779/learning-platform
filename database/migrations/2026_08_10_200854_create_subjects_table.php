@@ -16,13 +16,9 @@ return new class extends Migration
     $table->string('name'); // "رياضيات"
     $table->string('code')->unique(); // "MATH101" (المفتاح الأساسي)
     $table->text('description')->nullable();
-    $table->foreignId('grade_id')->constrained()->onDelete('cascade'); // الصف
-    $table->foreignId('teacher_id')->constrained('users')->onDelete('cascade'); // المدرس
     $table->boolean('is_active')->default(true);
     $table->timestamps();
     
-    // منع تكرار نفس المادة لنفس المدرس في نفس الصف
-    $table->unique(['name', 'grade_id', 'teacher_id']);
         });
     }
 
