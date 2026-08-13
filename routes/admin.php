@@ -9,8 +9,7 @@ use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\PaymentController;
 use App\Http\Controllers\Api\Admin\TeacherSubjectController;
-
-
+use App\Http\Controllers\Api\Admin\VideoManagementController;
 use models\Grade;
 use App\Models\Subject;
 use App\Models\User;
@@ -82,5 +81,22 @@ Route::delete('/teacher-subjects/{id}', [TeacherSubjectController::class, 'destr
 // Route::get('/teachers/{teacherId}/subjects/{subjectId}/students', [TeacherSubjectController::class, 'subjectStudents']);
 Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 'toggleTeacherStatus']);
 
-    });
+
+//Video Management
+
+
+    Route::prefix('videos')->group(function () {
+
+    Route::get('/', [VideoManagementController::class, 'index']);   
+    Route::get('/filter-options', [VideoManagementController::class, 'filterOptions']); 
+    Route::get('/{id}', [VideoManagementController::class, 'show']);   
+    Route::post('/{id}/approve', [VideoManagementController::class, 'approve']); 
+    Route::post('/{id}/reject', [VideoManagementController::class, 'reject']); 
+    Route::post('/{id}/revision', [VideoManagementController::class, 'requestRevision']); 
+    Route::post('/{id}/restore', [VideoManagementController::class, 'restoreToPending']);
+    Route::delete('/{id}', [VideoManagementController::class, 'destroy']); 
+
+});
+});
+   
 });

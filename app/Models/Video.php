@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Events\NewNotificationEvent;
 
 class Video extends Model
 {
@@ -62,7 +63,8 @@ class Video extends Model
         return $this->hasMany(VideoProgress::class);
     }
 
-    // Helper Methods
+    // ============= Helper Methods =============
+
     public function isPending(): bool
     {
         return $this->status === 'pending';
@@ -86,5 +88,106 @@ class Video extends Model
     public function isPublished(): bool
     {
         return $this->is_published && $this->status === 'approved';
+    }
+
+    // ============= دوال إرسال الإشعارات =============
+
+    /**
+     * إرسال إشعار للمدرسين (الأدمن) عند رفع فيديو جديد
+     */
+    public function notifyAdminsForNewVideo()
+    {
+        // جلب كل الأدمنة
+        $admins = User::where('role', 'admin')->where('is_active', true)->get();
+
+        foreach ($admins as $admin) {
+            $notification = Notification::create([
+                'user_id' => $admin->id,
+                'triggered_by_id' => $this->teacher_id,
+                'type' => 'video_uploaded',
+                'message' => "قام المدرس {$this->teacher->name} برفع فيديو جديد: {$this->title}",
+                'data' => [
+                    'video_id' => $this->id,
+                    'video_title' => $this->title,
+                    'teacher_name' => $this->teacher->name,
+                    'teacher_id' => $this->teacher_id,
+                    'subject_name' => $this->subject->name,
+                    'status' => 'pending',
+                ],
+                'is_read' => false,
+            ]);
+
+            // بث الإشعار فوراً عبر WebSocket
+            broadcast(new NewNotificationEvent($notification));
+        }
+    }
+
+    /**
+     * إرسال إشعار للمدرس عند قبول فيديو
+     */
+    public function notifyTeacherForApproval()
+    {
+        $notification = Notification::create([
+            'user_id' => $this->teacher_id,
+            'triggered_by_id' => $this->reviewed_by,
+            'type' => 'video_approved',
+            'message' => "تم قبول فيديو: {$this->title} ونشره للطلاب",
+            'data' => [
+                'video_id' => $this->id,
+                'video_title' => $this->title,
+                'reviewer_name' => $this->reviewer?->name ?? 'الأدمن',
+                'status' => 'approved',
+                'is_published' => true,
+            ],
+            'is_read' => false,
+        ]);
+
+        broadcast(new NewNotificationEvent($notification));
+    }
+
+    /**
+     * إرسال إشعار للمدرس عند رفض فيديو
+     */
+    public function notifyTeacherForRejection()
+    {
+        $notification = Notification::create([
+            'user_id' => $this->teacher_id,
+            'triggered_by_id' => $this->reviewed_by,
+            'type' => 'video_rejected',
+            'message' => "تم رفض فيديو: {$this->title}",
+            'data' => [
+                'video_id' => $this->id,
+                'video_title' => $this->title,
+                'reviewer_name' => $this->reviewer?->name ?? 'الأدمن',
+                'rejection_reason' => $this->rejection_reason,
+                'status' => 'rejected',
+            ],
+            'is_read' => false,
+        ]);
+
+        broadcast(new NewNotificationEvent($notification));
+    }
+
+    /**
+     * إرسال إشعار للمدرس عند طلب تعديل
+     */
+    public function notifyTeacherForRevision()
+    {
+        $notification = Notification::create([
+            'user_id' => $this->teacher_id,
+            'triggered_by_id' => $this->reviewed_by,
+            'type' => 'video_revision',
+            'message' => "مطلوب تعديل على فيديو: {$this->title}",
+            'data' => [
+                'video_id' => $this->id,
+                'video_title' => $this->title,
+                'reviewer_name' => $this->reviewer?->name ?? 'الأدمن',
+                'revision_reason' => $this->rejection_reason,
+                'status' => 'revision',
+            ],
+            'is_read' => false,
+        ]);
+
+        broadcast(new NewNotificationEvent($notification));
     }
 }
