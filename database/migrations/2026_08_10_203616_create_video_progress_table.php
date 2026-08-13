@@ -12,15 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('video_progress', function (Blueprint $table) {
-            $table->id();
-        $table->foreignId('content_id')->constrained()->onDelete('cascade');
-        $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
-        $table->integer('progress_percentage')->default(0); // نسبة المشاهدة
-        $table->integer('last_position')->default(0); // آخر موقف بالفيديو (بالثواني)
-        $table->boolean('is_completed')->default(false);
-        $table->timestamp('last_watched_at')->nullable();
-        $table->timestamps();
-        });
+    $table->id();
+    $table->foreignId('video_id')->constrained('videos')->onDelete('cascade');
+    $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
+    $table->integer('progress_percentage')->default(0);
+    $table->integer('last_position')->default(0);
+    $table->boolean('is_completed')->default(false);
+    $table->timestamp('last_watched_at')->nullable();
+    $table->timestamps();
+});
     }
 
     /**

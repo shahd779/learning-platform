@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Assignment extends Model
+class Exam extends Model
 {
     use HasFactory;
 
@@ -14,13 +14,18 @@ class Assignment extends Model
         'teacher_id',
         'title',
         'description',
-        'file_path',
-        'deadline',
+        'questions',
+        'total_marks',
+        'start_at',
+        'end_at',
         'status',
     ];
 
     protected $casts = [
-        'deadline' => 'datetime',
+        'questions' => 'array',
+        'total_marks' => 'integer',
+        'start_at' => 'datetime',
+        'end_at' => 'datetime',
     ];
 
     public function teacherSubjectGrade()
@@ -33,13 +38,20 @@ class Assignment extends Model
         return $this->belongsTo(User::class, 'teacher_id');
     }
 
-    public function studentSubmissions()
+    public function results()
     {
-        return $this->hasMany(AssignmentSubmission::class);
+        return $this->hasMany(ExamResult::class);
     }
 
     public function isPublished(): bool
     {
         return $this->status === 'published';
+    }
+
+    public function isActive(): bool
+    {
+        return $this->isPublished() && 
+               ($this->start_at === null || $this->start_at <= now()) &&
+               ($this->end_at === null || $this->end_at >= now());
     }
 }

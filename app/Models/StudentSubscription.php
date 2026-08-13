@@ -12,6 +12,7 @@ class StudentSubscription extends Model
     protected $fillable = [
         'student_id',
         'teacher_subject_grade_id',
+        'package_id', // نضيف package_id
         'status',
         'subscribed_at',
         'expires_at',
@@ -30,6 +31,16 @@ class StudentSubscription extends Model
     public function teacherSubjectGrade()
     {
         return $this->belongsTo(TeacherSubjectGrade::class);
+    }
+
+    public function package()
+    {
+        return $this->belongsTo(Package::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
     }
 
     public function isActive()

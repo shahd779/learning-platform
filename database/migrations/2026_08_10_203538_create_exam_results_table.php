@@ -11,18 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('exam_results', function (Blueprint $table) {
-            $table->id();
-        $table->foreignId('content_id')->constrained()->onDelete('cascade');
-        $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
-        $table->json('answers')->nullable(); // إجابات الطالب
-        $table->integer('score')->nullable(); // الدرجة
-        $table->integer('total')->nullable(); // الدرجة الكلية
-        $table->float('percentage')->nullable(); // النسبة المئوية
-        $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');
-        $table->timestamp('completed_at')->nullable();
-        $table->timestamps();
-        });
+       Schema::create('exam_results', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('exam_id')->constrained('exams')->onDelete('cascade');
+    $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
+    $table->json('answers')->nullable();
+    $table->integer('score')->nullable();
+    $table->integer('total')->nullable();
+    $table->float('percentage')->nullable();
+    $table->enum('status', ['pending', 'completed'])->default('pending');
+    $table->timestamp('completed_at')->nullable();
+    $table->timestamps();
+});
     }
 
     /**

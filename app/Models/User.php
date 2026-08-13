@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -15,7 +13,6 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
-        'email',
         'phone',
         'password',
         'image',
@@ -28,28 +25,20 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'is_active' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'password' => 'hashed',
+        'is_active' => 'boolean',
+    ];
 
-    // ============= العلاقات الأساسية =============
+    // ============= العلاقات =============
 
-    /**
-     * المواد اللي المدرس بيدرسها (عن طريق جدول teacher_subject_grade)
-     */
-    public function teacherSubjects()
+    // العلاقة بجدول teacher_subject_grade (المدرس)
+    public function teacherSubjectGrades()
     {
         return $this->hasMany(TeacherSubjectGrade::class, 'teacher_id');
     }
 
-    /**
-     * المواد اللي المدرس بيدرسها (مباشر)
-     */
+    // المواد اللي المدرس بيدرسها
     public function subjects()
     {
         return $this->belongsToMany(Subject::class, 'teacher_subject_grade', 'teacher_id', 'subject_id')
@@ -57,9 +46,7 @@ class User extends Authenticatable
                     ->withTimestamps();
     }
 
-    /**
-     * الصفوف اللي المدرس بيدرس فيها
-     */
+    // الصفوف اللي المدرس بيدرس فيها
     public function grades()
     {
         return $this->belongsToMany(Grade::class, 'teacher_subject_grade', 'teacher_id', 'grade_id')
@@ -67,30 +54,54 @@ class User extends Authenticatable
                     ->withTimestamps();
     }
 
-    /**
-     * الاشتراكات (للطلاب)
-     */
-    public function subscriptions()
+    // اشتراكات الطالب
+    public function studentSubscriptions()
     {
         return $this->hasMany(StudentSubscription::class, 'student_id');
     }
 
-    /**
-     * المواد اللي الطالب مشترك فيها
-     */
+    // المواد اللي الطالب مشترك فيها
     public function enrolledSubjects()
     {
-        return $this->belongsToMany(Subject::class, 'student_subscriptions', 'student_id', 'teacher_subject_grade_id')
+        return $this->belongsToMany(TeacherSubjectGrade::class, 'student_subscriptions', 'student_id', 'teacher_subject_grade_id')
                     ->withPivot('status', 'subscribed_at', 'expires_at')
                     ->withTimestamps();
     }
 
-    /**
-     * طلبات المدرس
-     */
-    public function teacherRequests()
+    // الفيديوهات (للمدرس)
+    public function videos()
     {
-        return $this->hasMany(TeacherRequest::class, 'teacher_id');
+        return $this->hasMany(Video::class, 'teacher_id');
+    }
+
+    // الواجبات (للمدرس)
+    public function assignments()
+    {
+        return $this->hasMany(Assignment::class, 'teacher_id');
+    }
+
+    // الامتحانات (للمدرس)
+    public function exams()
+    {
+        return $this->hasMany(Exam::class, 'teacher_id');
+    }
+
+    // المدفوعات (للطالب)
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'student_id');
+    }
+
+    // الشكاوى
+    public function complaints()
+    {
+        return $this->hasMany(Complaint::class, 'user_id');
+    }
+
+    // الردود على الشكاوى
+    public function complaintReplies()
+    {
+        return $this->hasMany(ComplaintReply::class, 'user_id');
     }
 
     // ============= Helper Methods =============
