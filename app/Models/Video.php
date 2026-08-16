@@ -80,10 +80,6 @@ class Video extends Model
         return $this->status === 'rejected';
     }
 
-    public function isRevision(): bool
-    {
-        return $this->status === 'revision';
-    }
 
     public function isPublished(): bool
     {
@@ -168,26 +164,4 @@ class Video extends Model
         broadcast(new NewNotificationEvent($notification));
     }
 
-    /**
-     * إرسال إشعار للمدرس عند طلب تعديل
-     */
-    public function notifyTeacherForRevision()
-    {
-        $notification = Notification::create([
-            'user_id' => $this->teacher_id,
-            'triggered_by_id' => $this->reviewed_by,
-            'type' => 'video_revision',
-            'message' => "مطلوب تعديل على فيديو: {$this->title}",
-            'data' => [
-                'video_id' => $this->id,
-                'video_title' => $this->title,
-                'reviewer_name' => $this->reviewer?->name ?? 'الأدمن',
-                'revision_reason' => $this->rejection_reason,
-                'status' => 'revision',
-            ],
-            'is_read' => false,
-        ]);
-
-        broadcast(new NewNotificationEvent($notification));
-    }
 }

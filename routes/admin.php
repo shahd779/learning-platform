@@ -91,8 +91,7 @@ Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 't
     Route::get('/filter-options', [VideoManagementController::class, 'filterOptions']); 
     Route::get('/{id}', [VideoManagementController::class, 'show']);   
     Route::post('/{id}/approve', [VideoManagementController::class, 'approve']); 
-    Route::post('/{id}/reject', [VideoManagementController::class, 'reject']); 
-    Route::post('/{id}/revision', [VideoManagementController::class, 'requestRevision']); 
+    Route::post('/{id}/reject', [VideoManagementController::class, 'reject']);  
     Route::post('/{id}/restore', [VideoManagementController::class, 'restoreToPending']);
     Route::delete('/{id}', [VideoManagementController::class, 'destroy']); 
 
