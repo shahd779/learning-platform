@@ -31,7 +31,6 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('video_path')->nullable(); // لو رفع عالسيرفر
-            $table->string('youtube_url')->nullable(); // لو يوتيوب
             $table->string('thumbnail')->nullable(); // صورة مصغرة
             $table->integer('duration')->nullable(); // المدة بالثواني
             

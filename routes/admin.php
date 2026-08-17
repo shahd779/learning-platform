@@ -96,6 +96,24 @@ Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 't
     Route::delete('/{id}', [VideoManagementController::class, 'destroy']); 
 
 });
+//package management
+Route::prefix('packages')->group(function () {
+    Route::get('/', [PackageController::class, 'index']);
+    Route::get('/filter-options', [PackageController::class, 'filterOptions']);
+    Route::post('/', [PackageController::class, 'store']);
+    Route::put('/{id}', [PackageController::class, 'update']);
+    Route::delete('/{id}', [PackageController::class, 'destroy']);
+
+});
+Route::prefix('payments')->group(function () {
+    // طلبات الدفع
+    Route::get('/', [PaymentController::class, 'index']);
+    Route::get('/filter-options', [PaymentController::class, 'filterOptions']);
+    Route::get('/{id}', [PaymentController::class, 'show']);
+    Route::post('/{id}/approve', [PaymentController::class, 'approve']);
+    Route::post('/{id}/reject', [PaymentController::class, 'reject']);
+    
+});
 });
    
 });

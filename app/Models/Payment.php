@@ -12,18 +12,16 @@ class Payment extends Model
     protected $fillable = [
         'student_id',
         'teacher_subject_grade_id',
-        'amount',
         'from_phone',
-        'to_phone',
         'transaction_id',
         'transfer_image',
         'status',
+        'rejection_reason',
         'reviewed_by',
         'reviewed_at',
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
         'reviewed_at' => 'datetime',
     ];
 

@@ -11,12 +11,11 @@ return new class extends Migration
     {
         Schema::create('packages', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // اسم الباقة
-            $table->text('description')->nullable(); // وصف الباقة
-            $table->decimal('price', 8, 2); // سعر الباقة
-            $table->integer('duration_days'); // مدة الباقة بالأيام
-            $table->boolean('is_active')->default(true); // حالة الباقة
-            $table->json('features')->nullable(); // مميزات الباقة
+            $table->string('name'); 
+            $table->decimal('price', 8, 2); 
+            $table->integer('duration_days'); 
+            $table->boolean('is_active')->default(true); 
+            $table->json('features')->nullable(); 
             $table->timestamps();
         });
     }

@@ -11,8 +11,6 @@ class Package extends Model
 
     protected $fillable = [
         'name',
-        'code',
-        'description',
         'price',
         'duration_days',
         'features',
@@ -27,6 +25,6 @@ class Package extends Model
 
     public function subscriptions()
     {
-        return $this->hasMany(Subscription::class);
+        return $this->hasMany(StudentSubscription::class);
     }
 }

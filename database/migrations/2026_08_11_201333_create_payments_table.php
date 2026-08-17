@@ -16,12 +16,11 @@ Schema::create('payments', function (Blueprint $table) {
     $table->id();
     $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
     $table->foreignId('teacher_subject_grade_id')->constrained('teacher_subject_grade')->onDelete('cascade');
-    $table->decimal('amount', 10, 2);
-    $table->string('from_phone'); // رقم التليفون المحول منه
-    $table->string('to_phone'); // رقم التليفون المسجل عالمنصة
-    $table->string('transaction_id')->unique(); // رقم العملية
-    $table->string('transfer_image')->nullable(); // صورة التحويل
+    $table->string('from_phone');
+    $table->string('transaction_id')->unique();
+    $table->string('transfer_image')->nullable();
     $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+    $table->text('rejection_reason')->nullable(); 
     $table->foreignId('reviewed_by')->nullable()->constrained('users');
     $table->timestamp('reviewed_at')->nullable();
     $table->timestamps();
