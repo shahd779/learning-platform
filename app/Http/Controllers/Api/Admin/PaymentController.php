@@ -11,8 +11,10 @@ use App\Models\StudentSubscription;
 use App\Models\Package;
 use App\Models\Notification;
 use App\Events\NewNotificationEvent;
+use App\Exports\PaymentsExport;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PaymentController extends Controller
 {
@@ -111,6 +113,7 @@ class PaymentController extends Controller
             'transfer_image' => $payment->transfer_image ? asset('storage/' . $payment->transfer_image) : null,
             'status' => $payment->status,
             'status_label' => $this->getStatusLabel($payment->status),
+            'rejection-reason'=>$payment->rejection_reason,
             'reviewer' => $payment->reviewer ? [
                 'id' => $payment->reviewer->id,
                 'name' => $payment->reviewer->name,
@@ -158,14 +161,14 @@ class PaymentController extends Controller
                 ['value' => 'this_week', 'label' => 'هذا الأسبوع'],
                 ['value' => 'this_month', 'label' => 'هذا الشهر'],
             ],
-            'periods' => [
-                ['value' => 'this_month', 'label' => 'هذا الشهر'],
-                ['value' => 'last_month', 'label' => 'الشهر الماضي'],
-                ['value' => 'last_6_months', 'label' => 'آخر 6 شهور'],
-                ['value' => 'last_year', 'label' => 'آخر سنة'],
-                ['value' => 'all', 'label' => 'كل الأوقات'],
-            ],
-        ];
+        //     'periods' => [
+        //         ['value' => 'this_month', 'label' => 'هذا الشهر'],
+        //         ['value' => 'last_month', 'label' => 'الشهر الماضي'],
+        //         ['value' => 'last_6_months', 'label' => 'آخر 6 شهور'],
+        //         ['value' => 'last_year', 'label' => 'آخر سنة'],
+        //         ['value' => 'all', 'label' => 'كل الأوقات'],
+        //     ],
+         ];
     }
 
     public function filterOptions()
@@ -275,6 +278,42 @@ class PaymentController extends Controller
 
         return $labels[$status] ?? $status;
     }
+
+public function export()
+{
+    $startDate = now()->subMonth()->startOfMonth();
+    $endDate = now()->endOfMonth();
+    $fileName = 'طلبات_الدفع_' . now()->format('Y_m') . '.xlsx';
+
+    
+    Excel::store(new PaymentsExport($startDate, $endDate), 'exports/' . $fileName, 'public');
+
+    
+    $fileUrl = asset('storage/exports/' . $fileName);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم تصدير الملف بنجاح',
+        'data' => [
+            'file_name' => $fileName,
+            'file_url' => $fileUrl,
+            'expires_at' => now()->addHours(24),
+        ]
+    ]);
+}
+public function downloadFile($fileName)
+{
+    $filePath = storage_path('app/public/exports/' . $fileName);
+
+    if (!file_exists($filePath)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الملف غير موجود'
+        ], 404);
+    }
+
+    return response()->download($filePath, $fileName);
+}
 
 
   

@@ -109,7 +109,10 @@ Route::prefix('payments')->group(function () {
     // طلبات الدفع
     Route::get('/', [PaymentController::class, 'index']);
     Route::get('/filter-options', [PaymentController::class, 'filterOptions']);
-    Route::get('/{id}', [PaymentController::class, 'show']);
+    Route::get('/export', [PaymentController::class, 'export']);
+    Route::get('/download/{fileName}', [PaymentController::class, 'downloadFile'])
+    ->middleware('check.file')
+    ->name('download.file');
     Route::post('/{id}/approve', [PaymentController::class, 'approve']);
     Route::post('/{id}/reject', [PaymentController::class, 'reject']);
     

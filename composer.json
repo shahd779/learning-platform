@@ -12,6 +12,7 @@
         "laravel/reverb": "^1.11",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
+        "maatwebsite/excel": "^4.0",
         "pbmedia/laravel-ffmpeg": "^8.9"
     },
     "require-dev": {
