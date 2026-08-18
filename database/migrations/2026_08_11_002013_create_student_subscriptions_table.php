@@ -20,7 +20,6 @@ return new class extends Migration
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
             
-            $table->unique(['student_id', 'teacher_subject_grade_id']);
         });
     }
 

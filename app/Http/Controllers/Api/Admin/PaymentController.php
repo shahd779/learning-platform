@@ -142,9 +142,7 @@ class PaymentController extends Controller
         ]
     ]);
 }
-
-
-    /**
+     /*
      * جلب خيارات الفلترة
      */
     private function getFilterOptions()
@@ -161,13 +159,6 @@ class PaymentController extends Controller
                 ['value' => 'this_week', 'label' => 'هذا الأسبوع'],
                 ['value' => 'this_month', 'label' => 'هذا الشهر'],
             ],
-        //     'periods' => [
-        //         ['value' => 'this_month', 'label' => 'هذا الشهر'],
-        //         ['value' => 'last_month', 'label' => 'الشهر الماضي'],
-        //         ['value' => 'last_6_months', 'label' => 'آخر 6 شهور'],
-        //         ['value' => 'last_year', 'label' => 'آخر سنة'],
-        //         ['value' => 'all', 'label' => 'كل الأوقات'],
-        //     ],
          ];
     }
 
@@ -178,7 +169,6 @@ class PaymentController extends Controller
             'data' => $this->getFilterOptions(),
         ]);
     }
-
 
     /**
      * جلب الإحصائيات
@@ -279,8 +269,8 @@ class PaymentController extends Controller
         return $labels[$status] ?? $status;
     }
 
-public function export()
-{
+   public function export()
+   {
     $startDate = now()->subMonth()->startOfMonth();
     $endDate = now()->endOfMonth();
     $fileName = 'طلبات_الدفع_' . now()->format('Y_m') . '.xlsx';
@@ -314,6 +304,225 @@ public function downloadFile($fileName)
 
     return response()->download($filePath, $fileName);
 }
+public function approve(Request $request, $id)
+{
+    $validator = Validator::make($request->all(), [
+        'package_id' => 'required|exists:packages,id',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    $payment = Payment::find($id);
+
+    if (!$payment) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الطلب غير موجود'
+        ], 404);
+    }
+
+    if ($payment->status !== 'pending') {
+        return response()->json([
+            'success' => false,
+            'message' => 'لا يمكن الموافقة على هذا الطلب'
+        ], 422);
+    }
+
+    $package = Package::find($request->package_id);
+
+    // ✅ التحقق من وجود اشتراك نشط
+    $existingSubscription = StudentSubscription::where('student_id', $payment->student_id)
+        ->where('teacher_subject_grade_id', $payment->teacher_subject_grade_id)
+        ->where('status', 'active')
+        ->where('expires_at', '>', now())
+        ->first();
+
+    if ($existingSubscription) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الطالب لديه اشتراك نشط في هذه المادة حتى ' . $existingSubscription->expires_at->format('Y-m-d'),
+        ], 422);
+    }
+
+    DB::beginTransaction();
+
+    try {
+        // 1. تحديث حالة الدفع
+        $payment->update([
+            'status' => 'approved',
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // 2. إنشاء اشتراك جديد مع تاريخ انتهاء محسوب
+        $subscription = StudentSubscription::create([
+            'student_id' => $payment->student_id,
+            'teacher_subject_grade_id' => $payment->teacher_subject_grade_id,
+            'package_id' => $package->id,
+            'status' => 'active',
+            'subscribed_at' => now(),
+            'expires_at' => now()->addDays($package->duration_days),
+        ]);
+
+        DB::commit();
+
+        // 3. إرسال إشعار للطالب
+        $this->notifyStudent($payment, $package, 'approved');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم الموافقة على الطلب وتفعيل الاشتراك',
+            'data' => [
+                'payment' => $payment->load(['student', 'reviewer']),
+                'subscription' => $subscription->load(['package']),
+                'expires_at' => $subscription->expires_at->format('Y-m-d'),
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ أثناء الموافقة على الطلب: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+    /**
+     * رفض طلب دفع
+     */
+    public function reject(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $payment = Payment::find($id);
+
+        if (!$payment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'الطلب غير موجود'
+            ], 404);
+        }
+
+        if ($payment->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن رفض هذا الطلب'
+            ], 422);
+        }
+
+        $payment->update([
+            'status' => 'rejected',
+            'rejection_reason' => $request->rejection_reason,
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // إرسال إشعار للطالب
+        $this->notifyStudentRejected($payment);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم رفض الطلب',
+            'data' => $payment->load(['student', 'reviewer'])
+        ]);
+    }
+
+    /**
+     * جلب الباقات المتاحة للاختيار (للـ Dropdown)
+     */
+    public function getPackages()
+    {
+        $packages = Package::where('is_active', true)
+            ->select('id', 'name', 'price', 'duration_days')
+            ->orderBy('price', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $packages
+        ]);
+    }
+
+    /**
+     * إرسال إشعار للطالب عند الموافقة
+     */
+    private function notifyStudent($payment, $package, $action)
+    {
+        $message = "✅ تم الموافقة على طلب الدفع رقم {$payment->transaction_id} وتفعيل اشتراكك في باقة: {$package->name} لمدة {$package->duration_days} يوم";
+
+        $notification = Notification::create([
+            'user_id' => $payment->student_id,
+            'triggered_by_id' => auth()->id(),
+            'type' => 'payment_approved',
+            'message' => $message,
+            'data' => [
+                'payment_id' => $payment->id,
+                'transaction_id' => $payment->transaction_id,
+                'package_id' => $package->id,
+                'package_name' => $package->name,
+                'duration_days' => $package->duration_days,
+                'status' => 'approved',
+                'reviewed_by' => auth()->user()->name,
+                'reviewed_at' => now()->format('Y-m-d H:i:s'),
+            ],
+            'is_read' => false,
+        ]);
+
+        try {
+            broadcast(new NewNotificationEvent($notification));
+        } catch (\Exception $e) {
+            
+        }
+    }
+
+    /**
+     * إرسال إشعار للطالب عند الرفض
+     */
+    private function notifyStudentRejected($payment)
+    {
+        $message = "❌ تم رفض طلب الدفع رقم {$payment->transaction_id}";
+
+        if ($payment->rejection_reason) {
+            $message .= " بسبب: {$payment->rejection_reason}";
+        }
+
+        $notification = Notification::create([
+            'user_id' => $payment->student_id,
+            'triggered_by_id' => auth()->id(),
+            'type' => 'payment_rejected',
+            'message' => $message,
+            'data' => [
+                'payment_id' => $payment->id,
+                'transaction_id' => $payment->transaction_id,
+                'rejection_reason' => $payment->rejection_reason,
+                'status' => 'rejected',
+                'reviewed_by' => auth()->user()->name,
+                'reviewed_at' => now()->format('Y-m-d H:i:s'),
+            ],
+            'is_read' => false,
+        ]);
+
+        try {
+            broadcast(new NewNotificationEvent($notification));
+        } catch (\Exception $e) {
+            
+        }
+    }
 
 
   

@@ -105,14 +105,15 @@ Route::prefix('packages')->group(function () {
     Route::delete('/{id}', [PackageController::class, 'destroy']);
 
 });
+// طلبات الدفع
 Route::prefix('payments')->group(function () {
-    // طلبات الدفع
     Route::get('/', [PaymentController::class, 'index']);
     Route::get('/filter-options', [PaymentController::class, 'filterOptions']);
     Route::get('/export', [PaymentController::class, 'export']);
     Route::get('/download/{fileName}', [PaymentController::class, 'downloadFile'])
     ->middleware('check.file')
     ->name('download.file');
+    Route::get('payments/packages', [PaymentController::class, 'getPackages']);
     Route::post('/{id}/approve', [PaymentController::class, 'approve']);
     Route::post('/{id}/reject', [PaymentController::class, 'reject']);
     
