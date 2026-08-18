@@ -20,108 +20,125 @@ class PaymentController extends Controller
      * عرض كل طلبات الدفع مع إحصائيات وفلترة
      */
     public function index(Request $request)
-    {
-        // =============================================
-        // 1. بناء الاستعلام الأساسي
-        // =============================================
-        $query = Payment::with([
-            'student:id,name,phone',
-            'teacherSubjectGrade.subject:id,name',
-            'teacherSubjectGrade.teacher:id,name',
-            'teacherSubjectGrade.grade:id,name',
-            'reviewer:id,name'
-        ]);
+{
+    // =============================================
+    // 1. بناء الاستعلام الأساسي
+    // =============================================
+    $query = Payment::with([
+        'student:id,name,phone',
+        'teacherSubjectGrade.subject:id,name',
+        'teacherSubjectGrade.teacher:id,name',
+        'teacherSubjectGrade.grade:id,name',
+        'reviewer:id,name'
+    ]);
 
-        // =============================================
-        // 2. الفلترة حسب الحالة
-        // =============================================
-        if ($request->has('status') && $request->status && $request->status !== 'all') {
-            $query->where('status', $request->status);
-        }
-
-        // =============================================
-        // 3. البحث بالاسم أو رقم الهاتف
-        // =============================================
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('student', function ($q2) use ($search) {
-                    $q2->where('name', 'LIKE', '%' . $search . '%')
-                       ->orWhere('phone', 'LIKE', '%' . $search . '%');
-                })
-                ->orWhere('from_phone', 'LIKE', '%' . $search . '%')
-                ->orWhere('transaction_id', 'LIKE', '%' . $search . '%');
-            });
-        }
-
-        // =============================================
-        // 4. الفلترة حسب التاريخ
-        // =============================================
-        if ($request->has('date_filter') && $request->date_filter) {
-            $dateRange = $this->getDateRange($request->date_filter);
-            if ($dateRange) {
-                $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
-            }
-        }
-
-
-
-
-        // =============================================
-        // 7. التصفح
-        // =============================================
-        $query->orderBy('created_at', 'desc');
-        $perPage = $request->per_page ?? 10;
-        $payments = $query->paginate($perPage);
-        
-
-        // =============================================
-        // 8. تنسيق البيانات
-        // =============================================
-        $formattedPayments = $payments->through(function ($payment) {
-            return [
-                'id' => $payment->id,
-                'transaction_id' => $payment->transaction_id,
-                'student' => [
-                    'id' => $payment->student->id ?? null,
-                    'name' => $payment->student->name ?? null,
-                    'phone' => $payment->student->phone ?? null,
-                ],
-                'from_phone' => $payment->from_phone,
-                'access_code' => $payment->teacherSubjectGrade->access_code ?? null,
-                'transfer_image' => $payment->transfer_image ? asset('storage/' . $payment->transfer_image) : null,
-                'status' => $payment->status,
-                'status_label' => $this->getStatusLabel($payment->status),
-                'reviewer' => $payment->reviewer ? [
-                    'id' => $payment->reviewer->id,
-                    'name' => $payment->reviewer->name,
-                ] : null,
-                'reviewed_at' => $payment->reviewed_at ? $payment->reviewed_at->format('Y-m-d H:i:s') : null,
-                'created_at' => $payment->created_at->format('Y-m-d H:i:s'),
-            ];
-        });
-
-        // =============================================
-        // 9. الإحصائيات
-        // =============================================
-        $stats = $this->getStats($request);
-
-
-
-        return response()->json([
-            'success' => true,
-            'stats' => $stats,
-            'data' => $formattedPayments,
-            'pagination' => [
-                'current_page' => $payments->currentPage(),
-                'per_page' => $payments->perPage(),
-                'total' => $payments->total(),
-                'last_page' => $payments->lastPage(),
-                'next_page_url' => $payments->nextPageUrl(),
-                'prev_page_url' => $payments->previousPageUrl(),
-            ]
-        ]);
+    // =============================================
+    // 2. الفلترة حسب الحالة
+    // =============================================
+    if ($request->has('status') && $request->status && $request->status !== 'all') {
+        $query->where('status', $request->status);
     }
+
+    // =============================================
+    // 3. البحث بالاسم أو رقم الهاتف
+    // =============================================
+    if ($request->has('search') && $request->search) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->whereHas('student', function ($q2) use ($search) {
+                $q2->where('name', 'LIKE', '%' . $search . '%')
+                   ->orWhere('phone', 'LIKE', '%' . $search . '%');
+            })
+            ->orWhere('from_phone', 'LIKE', '%' . $search . '%')
+            ->orWhere('transaction_id', 'LIKE', '%' . $search . '%');
+        });
+    }
+
+    // =============================================
+    // 4. الفلترة حسب التاريخ (date_filter)
+    // =============================================
+    if ($request->has('date_filter') && $request->date_filter) {
+        $dateRange = $this->getDateRange($request->date_filter);
+        if ($dateRange) {
+            $query->whereBetween('created_at', [$dateRange['start'], $dateRange['end']]);
+        }
+    }
+
+    // =============================================
+    // 5. الفلترة حسب الفترة الزمنية (period)
+    // =============================================
+    if ($request->has('period') && $request->period) {
+        $periodRange = $this->getDateRange($request->period);
+        if ($periodRange) {
+            $query->whereBetween('created_at', [$periodRange['start'], $periodRange['end']]);
+        }
+    }
+
+    // =============================================
+    // ✅ 6. الفلترة الافتراضية (هذا الشهر)
+    // =============================================
+    // لو مفيش date_filter و مفيش period و مفيش search، نطبق هذا الشهر
+    $hasDateFilter = $request->has('date_filter') && $request->date_filter;
+    $hasPeriod = $request->has('period') && $request->period;
+    $hasSearch = $request->has('search') && $request->search;
+
+    if (!$hasDateFilter && !$hasPeriod && !$hasSearch) {
+        $query->whereMonth('created_at', now()->month)
+              ->whereYear('created_at', now()->year);
+    }
+
+    // =============================================
+    // 7. الترتيب والتصفح
+    // =============================================
+    $query->orderBy('created_at', 'desc');
+    $perPage = $request->per_page ?? 10;
+    $payments = $query->paginate($perPage);
+
+    // =============================================
+    // 8. تنسيق البيانات
+    // =============================================
+    $formattedPayments = $payments->through(function ($payment) {
+        return [
+            'id' => $payment->id,
+            'transaction_id' => $payment->transaction_id,
+            'student' => [
+                'id' => $payment->student->id ?? null,
+                'name' => $payment->student->name ?? null,
+                'phone' => $payment->student->phone ?? null,
+            ],
+            'from_phone' => $payment->from_phone,
+            'access_code' => $payment->teacherSubjectGrade->access_code ?? null,
+            'transfer_image' => $payment->transfer_image ? asset('storage/' . $payment->transfer_image) : null,
+            'status' => $payment->status,
+            'status_label' => $this->getStatusLabel($payment->status),
+            'reviewer' => $payment->reviewer ? [
+                'id' => $payment->reviewer->id,
+                'name' => $payment->reviewer->name,
+            ] : null,
+            'reviewed_at' => $payment->reviewed_at ? $payment->reviewed_at->format('Y-m-d H:i:s') : null,
+            'created_at' => $payment->created_at->format('Y-m-d H:i:s'),
+        ];
+    });
+
+    // =============================================
+    // 9. الإحصائيات
+    // =============================================
+    $stats = $this->getStats($request);
+
+    return response()->json([
+        'success' => true,
+        'stats' => $stats,
+        'data' => $formattedPayments,
+        'pagination' => [
+            'current_page' => $payments->currentPage(),
+            'per_page' => $payments->perPage(),
+            'total' => $payments->total(),
+            'last_page' => $payments->lastPage(),
+            'next_page_url' => $payments->nextPageUrl(),
+            'prev_page_url' => $payments->previousPageUrl(),
+        ]
+    ]);
+}
 
 
     /**
