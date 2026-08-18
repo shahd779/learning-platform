@@ -70,6 +70,7 @@ class PaymentController extends Controller
         // =============================================
         // 7. التصفح
         // =============================================
+        $query->orderBy('created_at', 'desc');
         $perPage = $request->per_page ?? 10;
         $payments = $query->paginate($perPage);
         
