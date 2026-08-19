@@ -205,22 +205,23 @@ class PackageController extends Controller
      * جلب إجمالي الإيرادات من الاشتراكات النشطة
      */
     private function getRevenue($start, $end): float
-    {
-        $query = StudentSubscription::where('status', 'active')
-            ->whereHas('package', function ($q) {
-                $q->where('is_active', true);
-            });
+{
+    $query = StudentSubscription::where('status', 'active')
+        ->where('is_free', false) // ✅ استبعد المجاني
+        ->whereHas('package', function ($q) {
+            $q->where('is_active', true);
+        });
 
-        if ($start && $end) {
-            $query->whereBetween('created_at', [$start, $end]);
-        }
-
-        return $query->with('package')
-            ->get()
-            ->sum(function ($subscription) {
-                return $subscription->package->price ?? 0;
-            });
+    if ($start && $end) {
+        $query->whereBetween('created_at', [$start, $end]);
     }
+
+    return $query->with('package')
+        ->get()
+        ->sum(function ($subscription) {
+            return $subscription->package->price ?? 0;
+        });
+}
 
     /**
      * حساب النسبة المئوية للتغيير

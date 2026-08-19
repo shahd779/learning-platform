@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\SubjectController;
 use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\PaymentController;
+use App\Http\Controllers\Api\Admin\SubscriptionController;
 use App\Http\Controllers\Api\Admin\TeacherSubjectController;
 use App\Http\Controllers\Api\Admin\VideoManagementController;
 use models\Grade;
@@ -117,6 +118,19 @@ Route::prefix('payments')->group(function () {
     Route::post('/{id}/approve', [PaymentController::class, 'approve']);
     Route::post('/{id}/reject', [PaymentController::class, 'reject']);
     
+});
+Route::prefix('subscriptions')->group(function () {
+
+    // المشتركين
+    Route::get('/', [SubscriptionController::class, 'index']);
+    Route::get('/filter-options', [SubscriptionController::class, 'filterOptions']);
+    Route::put('/{id}', [SubscriptionController::class, 'update']);
+    Route::get('/export', [SubscriptionController::class, 'export']);
+    Route::get('download/{fileName}', [SubscriptionController::class, 'downloadFile']);
+    Route::post('/free', [SubscriptionController::class, 'createFreeSubscription']);
+    Route::get('/free/filter-options', [SubscriptionController::class, 'getFormData']);
+
+
 });
 });
    

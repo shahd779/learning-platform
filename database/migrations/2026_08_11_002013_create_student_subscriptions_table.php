@@ -18,6 +18,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'expired'])->default('active');
             $table->timestamp('subscribed_at')->nullable();
             $table->timestamp('expires_at')->nullable();
+            $table->boolean('is_free')->default(false);
             $table->timestamps();
             
         });

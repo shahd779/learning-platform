@@ -16,6 +16,7 @@ class StudentSubscription extends Model
         'status',
         'subscribed_at',
         'expires_at',
+        'is_free',
     ];
 
     protected $casts = [
