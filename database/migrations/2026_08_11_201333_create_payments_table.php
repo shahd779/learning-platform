@@ -14,8 +14,15 @@ return new class extends Migration
         // بعد التعديل
 Schema::create('payments', function (Blueprint $table) {
     $table->id();
-    $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
-    $table->foreignId('teacher_subject_grade_id')->constrained('teacher_subject_grade')->onDelete('cascade');
+    $table->foreign('student_id')
+                  ->references('id')
+                  ->on('users')
+                  ->onDelete('set null');
+
+    $table->foreign('teacher_subject_grade_id')
+                  ->references('id')
+                  ->on('teacher_subject_grade')
+                  ->onDelete('set null');
     $table->string('from_phone');
     $table->string('transaction_id')->unique();
     $table->string('transfer_image')->nullable();
