@@ -207,6 +207,11 @@ public function show($id)
         $thumbnailUrl = asset('storage/' . $video->thumbnail);
     }
 
+    // ✅ جلب تقدم المشاهدة للأدمن الحالي
+    $progress = \App\Models\VideoProgress::where('video_id', $id)
+        ->where('user_id', auth()->id())
+        ->first();
+
     return response()->json([
         'success' => true,
         'data' => [
@@ -240,6 +245,18 @@ public function show($id)
                 'name' => $video->reviewer->name,
             ] : null,
             'reviewed_at' => $video->reviewed_at ? $video->reviewed_at->format('Y-m-d H:i:s') : null,
+            // ✅ تقدم المشاهدة
+            'progress' => $progress ? [
+                'last_position' => $progress->last_position,
+                'progress_percentage' => $progress->progress_percentage,
+                'is_completed' => $progress->is_completed,
+                'last_watched_at' => $progress->last_watched_at,
+            ] : [
+                'last_position' => 0,
+                'progress_percentage' => 0,
+                'is_completed' => false,
+                'last_watched_at' => null,
+            ]
         ]
     ]);
 }

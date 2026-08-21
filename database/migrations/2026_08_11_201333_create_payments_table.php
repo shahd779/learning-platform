@@ -14,12 +14,15 @@ return new class extends Migration
         // بعد التعديل
 Schema::create('payments', function (Blueprint $table) {
     $table->id();
-    $table->foreign('student_id')
+    $table->foreignId('subscription_id')->nullable()
+    ->constrained('student_subscriptions')
+    ->onDelete('set null');
+    $table->foreignId('student_id')->nullable()
                   ->references('id')
                   ->on('users')
                   ->onDelete('set null');
 
-    $table->foreign('teacher_subject_grade_id')
+    $table->foreignId('teacher_subject_grade_id')->nullable()
                   ->references('id')
                   ->on('teacher_subject_grade')
                   ->onDelete('set null');

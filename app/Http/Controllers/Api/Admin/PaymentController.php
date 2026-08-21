@@ -276,7 +276,7 @@ class PaymentController extends Controller
     $fileName = 'طلبات_الدفع_' . now()->format('Y_m') . '.xlsx';
 
     
-    Excel::store(new PaymentsExport($startDate, $endDate), 'exports/' . $fileName, 'public');
+    Excel::store(new PaymentsExport(), 'exports/' . $fileName, 'public');
 
     
     $fileUrl = asset('storage/exports/' . $fileName);
@@ -359,7 +359,7 @@ public function approve(Request $request, $id)
             'reviewed_at' => now(),
         ]);
 
-        // 2. إنشاء اشتراك جديد مع تاريخ انتهاء محسوب
+        // 2. إنشاء اشتراك جديد
         $subscription = StudentSubscription::create([
             'student_id' => $payment->student_id,
             'teacher_subject_grade_id' => $payment->teacher_subject_grade_id,
@@ -369,16 +369,21 @@ public function approve(Request $request, $id)
             'expires_at' => now()->addDays($package->duration_days),
         ]);
 
+        // ✅ 3. ربط الدفع بالاشتراك
+        $payment->update([
+            'subscription_id' => $subscription->id,
+        ]);
+
         DB::commit();
 
-        // 3. إرسال إشعار للطالب
+        // 4. إرسال إشعار للطالب
         $this->notifyStudent($payment, $package, 'approved');
 
         return response()->json([
             'success' => true,
             'message' => 'تم الموافقة على الطلب وتفعيل الاشتراك',
             'data' => [
-                'payment' => $payment->load(['student', 'reviewer']),
+                'payment' => $payment->load(['student', 'reviewer', 'subscription.package']),
                 'subscription' => $subscription->load(['package']),
                 'expires_at' => $subscription->expires_at->format('Y-m-d'),
             ]

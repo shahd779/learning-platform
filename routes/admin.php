@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\SubjectController;
 use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\PaymentController;
+use App\Http\Controllers\Api\Admin\PaymentHistoryController;
 use App\Http\Controllers\Api\Admin\SubscriptionController;
 use App\Http\Controllers\Api\Admin\TeacherSubjectController;
 use App\Http\Controllers\Api\Admin\VideoManagementController;
@@ -130,7 +131,12 @@ Route::prefix('subscriptions')->group(function () {
     Route::post('/free', [SubscriptionController::class, 'createFreeSubscription']);
     Route::get('/free/filter-options', [SubscriptionController::class, 'getFormData']);
 
+});
+// سجل المدفوعات
+Route::prefix('payments-history')->group(function () {
 
+    Route::get('/', [PaymentHistoryController::class, 'index']);
+    Route::get('/filter-options', [PaymentHistoryController::class, 'filterOptions']);
 });
 });
    

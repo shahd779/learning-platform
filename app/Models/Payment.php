@@ -11,6 +11,7 @@ class Payment extends Model
 
     protected $fillable = [
         'student_id',
+        'subscription_id',
         'teacher_subject_grade_id',
         'from_phone',
         'transaction_id',
@@ -40,8 +41,8 @@ class Payment extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
-    public function subscription()
-    {
-        return $this->belongsTo(StudentSubscription::class);
-    }
+public function subscription()
+{
+    return $this->belongsTo(StudentSubscription::class, 'subscription_id');
+}
 }

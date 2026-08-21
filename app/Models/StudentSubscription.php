@@ -49,4 +49,5 @@ class StudentSubscription extends Model
         return $this->status === 'active' && 
                ($this->expires_at === null || $this->expires_at > now());
     }
+    
 }

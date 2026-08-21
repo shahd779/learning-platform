@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('video_progress', function (Blueprint $table) {
     $table->id();
     $table->foreignId('video_id')->constrained('videos')->onDelete('cascade');
-    $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
+    $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
     $table->integer('progress_percentage')->default(0);
     $table->integer('last_position')->default(0);
     $table->boolean('is_completed')->default(false);

@@ -12,19 +12,11 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class PaymentsExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
-    protected $startDate;
-    protected $endDate;
-
-    public function __construct($startDate, $endDate)
-    {
-        $this->startDate = $startDate;
-        $this->endDate = $endDate;
-    }
+    
 
     public function query(): \Illuminate\Database\Eloquent\Builder
     {
         return Payment::with(['student', 'teacherSubjectGrade.subject', 'teacherSubjectGrade.teacher', 'teacherSubjectGrade.grade'])
-            ->whereBetween('created_at', [$this->startDate, $this->endDate])
             ->orderBy('created_at', 'desc');
     }
 

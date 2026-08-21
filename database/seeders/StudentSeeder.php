@@ -129,15 +129,18 @@ class StudentSeeder extends Seeder
                     $statuses = ['pending', 'approved', 'rejected'];
                     $status = $statuses[array_rand($statuses)];
 
-                    $paymentData = [
-                        'student_id' => $student->id,
-                        'teacher_subject_grade_id' => $tsg->id,
-                        'from_phone' => '01' . rand(100000000, 999999999),
-                        'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . rand(100000, 999999),
-                        'transfer_image' => 'payments/transfer_' . rand(1, 10) . '.jpg',
-                        'status' => $status,
-                        'created_at' => $createdAt,
-                    ];
+                    // في StudentSeeder.php، في جزء إنشاء المدفوعات، أضف `subscription_id`:
+
+$paymentData = [
+    'student_id' => $student->id,
+    'teacher_subject_grade_id' => $tsg->id,
+    'subscription_id' => $subscription->id ?? null, // ✅ أضف السطر ده
+    'from_phone' => '01' . rand(100000000, 999999999),
+    'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . rand(100000, 999999),
+    'transfer_image' => 'payments/transfer_' . rand(1, 10) . '.jpg',
+    'status' => $status,
+    'created_at' => $createdAt,
+];
 
                     // لو الحالة approved أو rejected
                     if ($status !== 'pending') {

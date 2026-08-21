@@ -11,12 +11,12 @@ return new class extends Migration
         Schema::create('student_subscriptions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('package_id')->nullable()->constrained('packages')->onDelete('set null');
-            $table->foreign('student_id')
+            $table->foreignId('student_id')->nullable()
                   ->references('id')
                   ->on('users')
                   ->onDelete('set null');
 
-            $table->foreign('teacher_subject_grade_id')
+            $table->foreignId('teacher_subject_grade_id')->nullable()
                   ->references('id')
                   ->on('teacher_subject_grade')
                   ->onDelete('set null');

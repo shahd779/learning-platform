@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\TeacherSubjectGrade;
+use App\Models\StudentSubscription;
 use Illuminate\Support\Str;
 
 class PaymentSeeder extends Seeder
@@ -36,16 +37,26 @@ class PaymentSeeder extends Seeder
             'بيانات الطالب غير صحيحة',
         ];
 
-       
+        // =============================================
+        // جلب الاشتراكات الموجودة لربطها بالمدفوعات
+        // =============================================
+        $subscriptions = StudentSubscription::all();
+
 
         // مدفوعات من شهرين
         foreach (range(1, 8) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            // جلب اشتراك للربط
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null, // ✅ ربط بالاشتراك
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -61,10 +72,15 @@ class PaymentSeeder extends Seeder
         foreach (range(1, 6) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -80,10 +96,15 @@ class PaymentSeeder extends Seeder
         foreach (range(1, 5) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -99,10 +120,15 @@ class PaymentSeeder extends Seeder
         foreach (range(1, 4) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -118,10 +144,15 @@ class PaymentSeeder extends Seeder
         foreach (range(1, 3) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -134,15 +165,19 @@ class PaymentSeeder extends Seeder
         }
 
 
-
         // مدفوعات بانتظار المراجعة (pending)
         foreach (range(1, 10) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -158,10 +193,15 @@ class PaymentSeeder extends Seeder
         foreach (range(1, 15) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -177,10 +217,15 @@ class PaymentSeeder extends Seeder
         foreach (range(1, 5) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -193,14 +238,18 @@ class PaymentSeeder extends Seeder
         }
 
 
-
         foreach (range(1, 8) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',
@@ -213,14 +262,18 @@ class PaymentSeeder extends Seeder
         }
 
 
-
         foreach (range(1, 3) as $i) {
             $student = $students->random();
             $tsg = $teacherSubjectGrades->random();
+            
+            $subscription = $subscriptions->where('student_id', $student->id)
+                ->where('teacher_subject_grade_id', $tsg->id)
+                ->first();
 
             Payment::create([
                 'student_id' => $student->id,
                 'teacher_subject_grade_id' => $tsg->id,
+                'subscription_id' => $subscription->id ?? null,
                 'from_phone' => '01' . fake()->randomNumber(9, true),
                 'transaction_id' => 'TXN-' . strtoupper(Str::random(8)) . '-' . fake()->randomNumber(6),
                 'transfer_image' => 'payments/transfer_' . fake()->randomNumber(3) . '.jpg',

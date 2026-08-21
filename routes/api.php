@@ -18,12 +18,21 @@ Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
 });
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\VideoProgressController;
 
 Route::middleware('auth:sanctum')->group(function () {
     
     // إشعارات المستخدم
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-    
+    Route::prefix('notifications')->group(function(){
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+    });
+    // ✅ تقدم الفيديوهات (لأي مستخدم: طالب أو أدمن)
+    Route::prefix('video-progress')->group(function(){
+        Route::post('/', [VideoProgressController::class, 'updateProgress']);
+        Route::get('/{videoId}', [VideoProgressController::class, 'getProgress']);
+        Route::get('/', [VideoProgressController::class, 'getAllProgress']);
+        Route::post('/{videoId}/complete', [VideoProgressController::class, 'markAsCompleted']);
+     });
 });
