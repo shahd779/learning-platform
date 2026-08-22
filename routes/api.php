@@ -18,6 +18,7 @@ Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
 });
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\VideoProgressController;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -34,5 +35,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{videoId}', [VideoProgressController::class, 'getProgress']);
         Route::get('/', [VideoProgressController::class, 'getAllProgress']);
         Route::post('/{videoId}/complete', [VideoProgressController::class, 'markAsCompleted']);
+     });
+     Route::prefix('profile')->group(function(){
+        Route::get('/', [ProfileController::class, 'show']);
+        Route::post('/', [ProfileController::class, 'update']);
+        Route::post('/change-password', [ProfileController::class, 'changePassword']);
+        Route::delete('/image', [ProfileController::class, 'deleteImage']);
      });
 });
