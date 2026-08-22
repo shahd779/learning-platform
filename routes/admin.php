@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Admin\AuthController;
+use App\Http\Controllers\Api\Admin\ComplaintController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\GradeController;
 use App\Http\Controllers\Api\Admin\SubjectController;
@@ -137,6 +138,15 @@ Route::prefix('payments-history')->group(function () {
 
     Route::get('/', [PaymentHistoryController::class, 'index']);
     Route::get('/filter-options', [PaymentHistoryController::class, 'filterOptions']);
+});
+Route::prefix('complaints')->group(function () {
+    Route::get('/', [ComplaintController::class, 'index']);
+    Route::get('/filter-options', [ComplaintController::class, 'filterOptions']);
+    Route::get('/{id}', [ComplaintController::class, 'show']);
+    Route::post('/{id}/reply', [ComplaintController::class, 'addReply']);
+    Route::post('/{id}/change-status', [ComplaintController::class, 'changeStatus']);
+    Route::post('/{id}/change-type', [ComplaintController::class, 'changeType']);
+    Route::delete('/{id}', [ComplaintController::class, 'destroy']);
 });
 });
    

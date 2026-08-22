@@ -12,12 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('complaint_replies', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('complaint_id')->constrained('complaints')->onDelete('cascade');
-    $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-    $table->text('message');
-    $table->timestamps();
-});
+            $table->id();
+            $table->foreignId('complaint_id')->constrained('complaints')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->enum('sender_type', ['user', 'admin'])->default('user');
+            $table->text('message');
+            $table->string('attachment')->nullable();
+            $table->timestamps();
+        });
     }
 
     /**

@@ -12,7 +12,9 @@ class ComplaintReply extends Model
     protected $fillable = [
         'complaint_id',
         'user_id',
+        'sender_type',
         'message',
+        'attachment',
     ];
 
     public function complaint()
@@ -22,6 +24,6 @@ class ComplaintReply extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 }

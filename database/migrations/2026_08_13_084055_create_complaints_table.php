@@ -15,13 +15,13 @@ return new class extends Migration
     $table->id();
     $table->string('code')->unique();
     $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-    $table->enum('type', ['technical', 'behavior', 'content', 'payment', 'general'])->default('general');
+    $table->enum('type', ['general', 'code', 'payment'])->default('general');
     $table->string('subject');
     $table->text('description');
     $table->string('attachment')->nullable();
-    $table->enum('status', ['pending', 'in_progress', 'resolved', 'closed'])->default('pending');
-    $table->foreignId('assigned_to')->nullable()->constrained('users');
+    $table->enum('status', ['pending', 'in_progress', 'resolved'])->default('pending');
     $table->text('admin_response')->nullable();
+    $table->foreignId('resolved_by')->nullable()->constrained('users');
     $table->timestamp('resolved_at')->nullable();
     $table->timestamps();
 });

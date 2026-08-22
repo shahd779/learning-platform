@@ -17,8 +17,8 @@ class Complaint extends Model
         'description',
         'attachment',
         'status',
-        'assigned_to',
         'admin_response',
+        'resolved_by',
         'resolved_at',
     ];
 
@@ -28,26 +28,16 @@ class Complaint extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
-    public function assignedTo()
+    public function resolvedBy()
     {
-        return $this->belongsTo(User::class, 'assigned_to');
+        return $this->belongsTo(User::class, 'resolved_by');
     }
 
     public function replies()
     {
         return $this->hasMany(ComplaintReply::class);
-    }
-
-    public function isPending(): bool
-    {
-        return $this->status === 'pending';
-    }
-
-    public function isResolved(): bool
-    {
-        return $this->status === 'resolved' || $this->status === 'closed';
     }
 }
