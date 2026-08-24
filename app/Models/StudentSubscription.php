@@ -16,6 +16,7 @@ class StudentSubscription extends Model
         'status',
         'subscribed_at',
         'expires_at',
+        'is_free',
     ];
 
     protected $casts = [
@@ -48,4 +49,5 @@ class StudentSubscription extends Model
         return $this->status === 'active' && 
                ($this->expires_at === null || $this->expires_at > now());
     }
+    
 }

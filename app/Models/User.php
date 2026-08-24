@@ -133,4 +133,30 @@ class User extends Authenticatable
         }
         return asset('images/default-avatar.png');
     }
+     public function currentGrade()
+    {
+        return $this->hasOneThrough(
+            Grade::class,
+            StudentSubscription::class,
+            'student_id',          // Foreign key on student_subscriptions
+            'id',                  // Local key on grades
+            'id',                  // Local key on users
+            'teacher_subject_grade_id' // Local key on student_subscriptions
+        )
+        ->where('student_subscriptions.status', 'active')
+        ->join('teacher_subject_grade', 'student_subscriptions.teacher_subject_grade_id', '=', 'teacher_subject_grade.id')
+        ->select('grades.*')
+        ->latest('student_subscriptions.created_at')
+        ->limit(1);
+    }
+
+    /**
+     * جلب اسم الصف الحالي (Attribute)
+     */
+    public function getCurrentGradeNameAttribute()
+    {
+        $grade = $this->currentGrade()->first();
+        return $grade ? $grade->name : null;
+    }
+
 }

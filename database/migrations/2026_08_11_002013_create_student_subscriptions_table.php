@@ -10,16 +10,22 @@ return new class extends Migration
     {
         Schema::create('student_subscriptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('teacher_subject_grade_id')
-                  ->constrained('teacher_subject_grade') // ✅ اسم الجدول الصحيح
-                  ->onDelete('cascade');
-            $table->enum('status', ['active', 'expired', 'cancelled'])->default('active');
+            $table->foreignId('package_id')->nullable()->constrained('packages')->onDelete('set null');
+            $table->foreignId('student_id')->nullable()
+                  ->references('id')
+                  ->on('users')
+                  ->onDelete('set null');
+
+            $table->foreignId('teacher_subject_grade_id')->nullable()
+                  ->references('id')
+                  ->on('teacher_subject_grade')
+                  ->onDelete('set null');
+            $table->enum('status', ['active', 'expired'])->default('active');
             $table->timestamp('subscribed_at')->nullable();
             $table->timestamp('expires_at')->nullable();
+            $table->boolean('is_free')->default(false);
             $table->timestamps();
             
-            $table->unique(['student_id', 'teacher_subject_grade_id']);
         });
     }
 

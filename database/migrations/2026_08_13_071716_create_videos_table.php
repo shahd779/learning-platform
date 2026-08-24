@@ -31,7 +31,6 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('video_path')->nullable(); // لو رفع عالسيرفر
-            $table->string('youtube_url')->nullable(); // لو يوتيوب
             $table->string('thumbnail')->nullable(); // صورة مصغرة
             $table->integer('duration')->nullable(); // المدة بالثواني
             
@@ -39,7 +38,7 @@ return new class extends Migration
             $table->integer('order')->default(0);
             
             // الموافقة (الأدمن يراجع الفيديوهات فقط)
-            $table->enum('status', ['pending', 'approved', 'rejected', 'revision'])
+            $table->enum('status', ['pending', 'approved', 'rejected'])
                   ->default('pending');
             
             $table->text('rejection_reason')->nullable(); // سبب الرفض أو طلب التعديل

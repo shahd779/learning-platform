@@ -2,12 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Admin\AuthController;
+use App\Http\Controllers\Api\Admin\ComplaintController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\GradeController;
 use App\Http\Controllers\Api\Admin\SubjectController;
 use App\Http\Controllers\Api\Admin\PackageController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\PaymentController;
+use App\Http\Controllers\Api\Admin\PaymentHistoryController;
+use App\Http\Controllers\Api\Admin\SubscriptionController;
 use App\Http\Controllers\Api\Admin\TeacherSubjectController;
 use App\Http\Controllers\Api\Admin\VideoManagementController;
 use models\Grade;
@@ -104,11 +107,59 @@ Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 't
     Route::get('/filter-options', [VideoManagementController::class, 'filterOptions']); 
     Route::get('/{id}', [VideoManagementController::class, 'show']);   
     Route::post('/{id}/approve', [VideoManagementController::class, 'approve']); 
-    Route::post('/{id}/reject', [VideoManagementController::class, 'reject']); 
-    Route::post('/{id}/revision', [VideoManagementController::class, 'requestRevision']); 
+    Route::post('/{id}/reject', [VideoManagementController::class, 'reject']);  
     Route::post('/{id}/restore', [VideoManagementController::class, 'restoreToPending']);
     Route::delete('/{id}', [VideoManagementController::class, 'destroy']); 
 
+});
+//package management
+Route::prefix('packages')->group(function () {
+    Route::get('/', [PackageController::class, 'index']);
+    Route::get('/filter-options', [PackageController::class, 'filterOptions']);
+    Route::post('/', [PackageController::class, 'store']);
+    Route::put('/{id}', [PackageController::class, 'update']);
+    Route::delete('/{id}', [PackageController::class, 'destroy']);
+
+});
+// طلبات الدفع
+Route::prefix('payments')->group(function () {
+    Route::get('/', [PaymentController::class, 'index']);
+    Route::get('/filter-options', [PaymentController::class, 'filterOptions']);
+    Route::get('/export', [PaymentController::class, 'export']);
+    Route::get('/download/{fileName}', [PaymentController::class, 'downloadFile'])
+    ->middleware('check.file')
+    ->name('download.file');
+    Route::get('payments/packages', [PaymentController::class, 'getPackages']);
+    Route::post('/{id}/approve', [PaymentController::class, 'approve']);
+    Route::post('/{id}/reject', [PaymentController::class, 'reject']);
+    
+});
+Route::prefix('subscriptions')->group(function () {
+
+    // المشتركين
+    Route::get('/', [SubscriptionController::class, 'index']);
+    Route::get('/filter-options', [SubscriptionController::class, 'filterOptions']);
+    Route::put('/{id}', [SubscriptionController::class, 'update']);
+    Route::get('/export', [SubscriptionController::class, 'export']);
+    Route::get('download/{fileName}', [SubscriptionController::class, 'downloadFile']);
+    Route::post('/free', [SubscriptionController::class, 'createFreeSubscription']);
+    Route::get('/free/filter-options', [SubscriptionController::class, 'getFormData']);
+
+});
+// سجل المدفوعات
+Route::prefix('payments-history')->group(function () {
+
+    Route::get('/', [PaymentHistoryController::class, 'index']);
+    Route::get('/filter-options', [PaymentHistoryController::class, 'filterOptions']);
+});
+Route::prefix('complaints')->group(function () {
+    Route::get('/', [ComplaintController::class, 'index']);
+    Route::get('/filter-options', [ComplaintController::class, 'filterOptions']);
+    Route::get('/{id}', [ComplaintController::class, 'show']);
+    Route::post('/{id}/reply', [ComplaintController::class, 'addReply']);
+    Route::post('/{id}/change-status', [ComplaintController::class, 'changeStatus']);
+    Route::post('/{id}/change-type', [ComplaintController::class, 'changeType']);
+    Route::delete('/{id}', [ComplaintController::class, 'destroy']);
 });
 });
    

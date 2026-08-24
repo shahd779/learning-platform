@@ -24,6 +24,11 @@ class DatabaseSeeder extends Seeder
             TeacherSeeder::class,
             GradeSeeder::class,
             SubjectSeeder::class,
+            PackageSeeder::class,
+            StudentSeeder::class,
+            PaymentSeeder::class,
+            ComplaintSeeder::class,
+
         ]);
     }
 }

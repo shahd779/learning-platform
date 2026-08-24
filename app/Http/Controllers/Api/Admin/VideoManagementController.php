@@ -39,7 +39,6 @@ class VideoManagementController extends Controller
                 ['value' => 'pending', 'label' => 'بانتظار المراجعة'],
                 ['value' => 'approved', 'label' => 'تمت الموافقة'],
                 ['value' => 'rejected', 'label' => 'مرفوض'],
-                ['value' => 'revision', 'label' => 'مطلوب تعديل'],
             ],
             ]
         ]);
@@ -208,6 +207,11 @@ public function show($id)
         $thumbnailUrl = asset('storage/' . $video->thumbnail);
     }
 
+    // ✅ جلب تقدم المشاهدة للأدمن الحالي
+    $progress = \App\Models\VideoProgress::where('video_id', $id)
+        ->where('user_id', auth()->id())
+        ->first();
+
     return response()->json([
         'success' => true,
         'data' => [
@@ -241,6 +245,18 @@ public function show($id)
                 'name' => $video->reviewer->name,
             ] : null,
             'reviewed_at' => $video->reviewed_at ? $video->reviewed_at->format('Y-m-d H:i:s') : null,
+            // ✅ تقدم المشاهدة
+            'progress' => $progress ? [
+                'last_position' => $progress->last_position,
+                'progress_percentage' => $progress->progress_percentage,
+                'is_completed' => $progress->is_completed,
+                'last_watched_at' => $progress->last_watched_at,
+            ] : [
+                'last_position' => 0,
+                'progress_percentage' => 0,
+                'is_completed' => false,
+                'last_watched_at' => null,
+            ]
         ]
     ]);
 }
@@ -292,7 +308,7 @@ public function show($id)
     public function reject(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'rejection_reason' => 'nullable|string|min:10|max:500',
+            'rejection_reason' => 'required|string|min:10|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -336,59 +352,7 @@ public function show($id)
         ]);
     }
 
-    /**
-     * طلب تعديل على الفيديو
-     */
-    public function requestRevision(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'rejection_reason' => 'required|string|min:10|max:500',
-        ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $video = Video::find($id);
-
-        if (!$video) {
-            return response()->json([
-                'success' => false,
-                'message' => 'الفيديو غير موجود'
-            ], 404);
-        }
-
-        if ($video->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا يمكن طلب تعديل على هذا الفيديو'
-            ], 422);
-        }
-
-        $video->update([
-            'status' => 'revision',
-            'is_published' => false,
-            'rejection_reason' => $request->rejection_reason,
-            'reviewed_by' => auth()->id(),
-            'reviewed_at' => now(),
-        ]);
-
-        // إرسال إشعار للمدرس
-        $this->notifyTeacher($video, 'revision');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'تم إرسال طلب تعديل للمدرس',
-            'data' => $video->load(['teacher', 'subject', 'reviewer'])
-        ]);
-    }
-
-    /**
- * إعادة فيديو مرفوض للمراجعة (ليعدله المدرس)
- */
 public function restoreToPending($id)
 {
     $video = Video::find($id);
@@ -485,17 +449,8 @@ private function notifyTeacherRestored($video)
         ]);
     }
 
-    // =============================================
-    // دوال مساعدة
-    // =============================================
-
+    
  
-
-   
-
-    /**
-     * تنسيق المدة
-     */
     private function formatDuration(int $seconds): string
     {
         $hours = floor($seconds / 3600);
