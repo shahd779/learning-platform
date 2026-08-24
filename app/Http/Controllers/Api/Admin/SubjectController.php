@@ -5,39 +5,71 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Subject;
+use App\Models\Grade;
+
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 
 class SubjectController extends Controller
 {
+
+
+/**
+ * إحصائيات المواد والصفوف (شاملة)
+ */
+public function overview()
+{
+    $totalSubjects = Subject::count();
+    
+    $totalGrades = Grade::count();
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'subjects' => [
+                'total' => $totalSubjects,
+            ],
+            'grades' => [
+                'total' => $totalGrades,
+            ],
+        ]
+    ], 200, [], JSON_UNESCAPED_UNICODE);
+}
     /**
      * عرض كل المواد
      */
-    public function index(Request $request)
-    {
-        $query = Subject::query();
+public function index(Request $request)
+{
+    $query = Subject::query();
 
-        // فلترة حسب الحالة
-        if ($request->has('is_active') && $request->is_active !== '') {
-            $query->where('is_active', $request->is_active);
-        }
-
-        // بحث بالاسم أو الكود
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', '%' . $search . '%')
-                  ->orWhere('code', 'LIKE', '%' . $search . '%');
-            });
-        }
-
-        $subjects = $query->latest()->paginate($request->per_page ?? 15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $subjects
-        ]);
+    // فلترة حسب الحالة
+    if ($request->has('is_active') && $request->is_active !== '') {
+        $query->where('is_active', $request->is_active);
     }
+
+    // بحث بالاسم أو الكود
+    if ($request->has('search') && $request->search) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'LIKE', '%' . $search . '%')
+              ->orWhere('code', 'LIKE', '%' . $search . '%');
+        });
+    }
+
+    // ✅ تحديد عدد النتائج في الصفحة
+    $perPage = $request->has('per_page') ? (int)$request->per_page : 15;
+    
+    // منع القيم الغريبة
+    if ($perPage < 1) $perPage = 1;
+    if ($perPage > 100) $perPage = 100;
+
+    $subjects = $query->latest()->paginate($perPage);
+
+    return response()->json([
+        'success' => true,
+        'data' => $subjects
+    ], 200, [], JSON_UNESCAPED_UNICODE);
+}
 
     /**
      * إضافة مادة جديدة
@@ -73,25 +105,7 @@ class SubjectController extends Controller
         ]);
     }
 
-    /**
-     * عرض مادة معينة
-     */
-    public function show($id)
-    {
-        $subject = Subject::find($id);
 
-        if (!$subject) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المادة غير موجودة'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => $subject
-        ]);
-    }
 
     /**
      * تحديث مادة

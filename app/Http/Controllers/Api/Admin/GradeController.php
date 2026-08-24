@@ -25,7 +25,15 @@ class GradeController extends Controller
             });
         }
 
-        $grades = $query->latest()->paginate($request->per_page ?? 15);
+        
+        // ✅ تحديد عدد النتائج في الصفحة
+        $perPage = $request->has('per_page') ? (int)$request->per_page : 15;
+        
+        // منع القيم الغريبة
+        if ($perPage < 1) $perPage = 1;
+        if ($perPage > 100) $perPage = 100;
+
+        $grades = $query->latest()->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -59,25 +67,7 @@ class GradeController extends Controller
         ]);
     }
 
-    /**
-     * عرض صف معين
-     */
-    public function show($id)
-    {
-        $grade = Grade::find($id);
 
-        if (!$grade) {
-            return response()->json([
-                'success' => false,
-                'message' => 'الصف غير موجود'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => $grade
-        ]);
-    }
 
     /**
      * تحديث صف
@@ -146,8 +136,6 @@ public function update(Request $request, $id)
         ]);
     }
 
-    /**
-     * جلب كل المواد التابعة لصف معين
-     */
+    
    
 }

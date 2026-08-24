@@ -44,20 +44,20 @@ Route::prefix('admin')->group(function () {
 
         Route::get('/stats', [UserController::class, 'stats']);
         Route::get('/users', [UserController::class, 'index']);
+        Route::get('/users/blocked', [UserController::class, 'blockedUsers']);
         Route::get('/filter-options', [UserController::class, 'filterOptions']);   
 
 
         Route::get('/grades', [GradeController::class, 'index']);
         Route::post('/grades', [GradeController::class, 'store']);
-        Route::get('/grades/{id}', [GradeController::class, 'show']);
         Route::put('/grades/{id}', [GradeController::class, 'update']);
         Route::delete('/grades/{id}', [GradeController::class, 'destroy']);
 
         // ===== Subjects Management (المواد) =====
+        Route::get('/overview/stats', [SubjectController::class, 'overview']);
+
         Route::get('/subjects', [SubjectController::class, 'index']);
-        // Route::get('/subjects/options', [SubjectController::class, 'options']);
         Route::post('/subjects', [SubjectController::class, 'store']);
-        Route::get('/subjects/{id}', [SubjectController::class, 'show']);
         Route::put('/subjects/{id}', [SubjectController::class, 'update']);
         Route::delete('/subjects/{id}', [SubjectController::class, 'destroy']);
         // Route::post('/subjects/{id}/toggle-status', [SubjectController::class, 'toggleStatus']);
@@ -73,13 +73,26 @@ Route::prefix('admin')->group(function () {
         // Route::post('/teacher-subjects/{id}/toggle-status', [TeacherSubjectController::class, 'toggleStatus']);
         // Route::get('/teacher-subjects/{id}/students', [TeacherSubjectController::class, 'students']);
 
-        // ===== Teacher Details =====
+        // ===== Teacher Details =====  
 Route::get('/teachers/{id}/details', [TeacherSubjectController::class, 'teacherDetails']);
 Route::delete('/teacher-subjects/{id}', [TeacherSubjectController::class, 'destroy']);
+Route::put('/teacher-subjects/{id}/access-code', [TeacherSubjectController::class, 'updateAccessCode']);
+
 
 // Route::get('/teachers/{id}/students', [TeacherSubjectController::class, 'teacherStudents']);
 // Route::get('/teachers/{teacherId}/subjects/{subjectId}/students', [TeacherSubjectController::class, 'subjectStudents']);
 Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 'toggleTeacherStatus']);
+
+
+
+
+
+
+
+
+
+
+
 
 
 //Video Management
