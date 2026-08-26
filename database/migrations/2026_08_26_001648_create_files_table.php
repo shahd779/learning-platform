@@ -18,9 +18,7 @@ return new class extends Migration
             $table->foreignId('subject_id')->constrained('subjects')->onDelete('cascade');
     
             $table->string('title');
-            $table->text('description')->nullable();
             $table->string('file_path');
-            $table->string('file_type'); // pdf, docx, xlsx, zip, etc.
             $table->string('file_size'); // حجم الملف بالكيلوبايت
             $table->integer('downloads_count')->default(0);
     
