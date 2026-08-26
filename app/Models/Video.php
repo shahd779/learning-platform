@@ -26,6 +26,10 @@ class Video extends Model
         'reviewed_at',
         'views_count',
         'is_published',
+        'is_active',
+        'is_available',
+        'available_until',
+        'max_watch_count',
     ];
 
     protected $casts = [
@@ -162,5 +166,41 @@ class Video extends Model
 
         broadcast(new NewNotificationEvent($notification));
     }
+    // app/Models/Video.php
+
+
+
+// هل الفيديو متاح للمشاهدة؟
+public function isAccessible()
+{
+    if (!$this->is_active) return false;
+    if (!$this->is_available) return false;
+    if ($this->available_until && $this->available_until < now()) return false;
+    return true;
+}
+
+// هل الطالب يقدر يشاهد الفيديو (لم يتجاوز عدد المشاهدات)؟
+public function canWatch($studentId)
+{
+    if ($this->max_watch_count === null) return true;
+    
+    $watchCount = VideoProgress::where('video_id', $this->id)
+        ->where('user_id', $studentId)
+        ->count();
+    
+    return $watchCount < $this->max_watch_count;
+}
+
+// جلب عدد المشاهدات المتبقية للطالب
+public function getRemainingWatches($studentId)
+{
+    if ($this->max_watch_count === null) return null;
+    
+    $watchCount = VideoProgress::where('video_id', $this->id)
+        ->where('user_id', $studentId)
+        ->count();
+    
+    return max(0, $this->max_watch_count - $watchCount);
+}
 
 }
