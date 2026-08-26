@@ -61,6 +61,7 @@ Route::prefix('admin')->group(function () {
        
         // ✅ الطلاب - كل المواد (دالة واحدة)
         Route::post('/students/{studentId}/toggle-ban-all', [UserController::class, 'toggleStudentAllBan']);
+        Route::get('/{studentId}/subjects', [UserController::class, 'getStudentSubjects']);
 
         Route::get('/blocked', [UserController::class, 'blockedUsers']);
         Route::get('/blocked/export', [UserController::class, 'exportBlockedUsers']); // ✅ تصدير المتوق
@@ -98,14 +99,14 @@ Route::prefix('admin')->group(function () {
         // Route::get('/teacher-subjects/{id}/students', [TeacherSubjectController::class, 'students']);
 
         // ===== Teacher Details =====  
-Route::get('/teachers/{id}/details', [TeacherSubjectController::class, 'teacherDetails']);
-Route::delete('/teacher-subjects/{id}', [TeacherSubjectController::class, 'destroy']);
-Route::put('/teacher-subjects/{id}/access-code', [TeacherSubjectController::class, 'updateAccessCode']);
+        Route::get('/teachers/{id}/details', [TeacherSubjectController::class, 'teacherDetails']);
+        Route::delete('/teacher-subjects/{id}', [TeacherSubjectController::class, 'destroy']);
+        Route::put('/teacher-subjects/{id}/access-code', [TeacherSubjectController::class, 'updateAccessCode']);
 
 
-// Route::get('/teachers/{id}/students', [TeacherSubjectController::class, 'teacherStudents']);
-// Route::get('/teachers/{teacherId}/subjects/{subjectId}/students', [TeacherSubjectController::class, 'subjectStudents']);
-Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 'toggleTeacherStatus']);
+        // Route::get('/teachers/{id}/students', [TeacherSubjectController::class, 'teacherStudents']);
+        // Route::get('/teachers/{teacherId}/subjects/{subjectId}/students', [TeacherSubjectController::class, 'subjectStudents']);
+        Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 'toggleTeacherStatus']);
 
 
 

@@ -1035,4 +1035,45 @@ public function exportBlockedUsers(Request $request)
             ]
         ], 200, [], JSON_UNESCAPED_UNICODE);
     }
+
+    /**
+ * جلب كل المواد المشترك فيها طالب معين (للدروب داون)
+ */
+/**
+ * جلب كل المواد المشترك فيها طالب معين (للدروب داون)
+ */
+public function getStudentSubjects($studentId)
+{
+    $student = User::where('role', 'student')->find($studentId);
+
+    if (!$student) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الطالب غير موجود'
+        ], 404);
+    }
+
+    $subscriptions = StudentSubscription::where('student_id', $studentId)
+        ->where('status', 'active')
+        ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade', 'teacherSubjectGrade.teacher'])
+        ->get();
+
+    // ✅ فلترة الاشتراكات اللي فيها بيانات كاملة
+    $validSubscriptions = $subscriptions->filter(function($subscription) {
+        return $subscription->teacherSubjectGrade !== null 
+            && $subscription->teacherSubjectGrade->subject !== null
+            && $subscription->teacherSubjectGrade->grade !== null;
+    });
+
+    return response()->json([
+        'success' => true,
+        'data' => $validSubscriptions->map(function($subscription) {
+            return [
+                'subscription_id' => $subscription->id,
+                'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
+                
+            ];
+        })
+    ], 200, [], JSON_UNESCAPED_UNICODE);
+}
 }
