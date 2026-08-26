@@ -23,33 +23,51 @@ class UserController extends Controller
     /**
      * إحصائيات المستخدمين
      */
-    public function stats()
-    {
-        $totalUsers = User::count();
-        $admins = User::where('role', 'admin')->count();
-        $teachers = User::where('role', 'teacher')->count();
-        $students = User::where('role', 'student')->count();
-        $blockedUsers = User::where('is_active', false)->count();
+public function stats()
+{
+    $totalUsers = User::count();
+    $admins = User::where('role', 'admin')->count();
+    $teachers = User::where('role', 'teacher')->count();
+    $students = User::where('role', 'student')->count();
 
-        // المدرسين النشطين (اللي عندهم مواد)
-        $activeTeachers = TeacherSubjectGrade::distinct('teacher_id')->count();
+    // ✅ الحسابات الموقوفة (المدرسين والأدمن: is_active = false)
+    $blockedAdmins = User::where('role', 'admin')->where('is_active', false)->count();
+    $blockedTeachers = User::where('role', 'teacher')->where('is_active', false)->count();
 
-        // الطلاب النشطين (اللي عندهم اشتراكات نشطة)
-        $activeStudents = StudentSubscription::where('status', 'active')
-            ->distinct('student_id')
-            ->count();
+    // ✅ الطلاب الموقوفين: is_active = false OR عنده اشتراك محظور
+    $blockedStudents = User::where('role', 'student')
+        ->where(function ($q) {
+            $q->where('is_active', false)
+              ->orWhereHas('studentSubscriptions', function ($q2) {
+                  $q2->where('is_banned', true);
+              });
+        })
+        ->distinct('id')
+        ->count();
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total_users' => $totalUsers,
-                'admins' => $admins,
-                'teachers' => $teachers,
-                'students' => $students,
-                'blocked_users' => $blockedUsers,
-            ]
-        ]);
-    }
+    // ✅ إجمالي الحسابات الموقوفة
+    $blockedUsers = $blockedAdmins + $blockedTeachers + $blockedStudents;
+
+    // المدرسين النشطين (اللي عندهم مواد)
+    $activeTeachers = TeacherSubjectGrade::distinct('teacher_id')->count();
+
+    // الطلاب النشطين (اللي عندهم اشتراكات نشطة وغير محظورة)
+    $activeStudents = StudentSubscription::where('status', 'active')
+        ->where('is_banned', false)
+        ->distinct('student_id')
+        ->count();
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'total_users' => $totalUsers,
+            'admins' => $admins,
+            'teachers' => $teachers,
+            'students' => $students,
+            'blocked_users' => $blockedUsers,
+        ]
+    ]);
+}
 
 
 
@@ -122,6 +140,26 @@ public function exportBlockedUsers(Request $request)
     public function index(Request $request)
     {
         $query = User::query();
+
+        
+    // ✅ الحسابات الموقوفة (المدرسين والأدمن: is_active = false)
+    $blockedAdmins = User::where('role', 'admin')->where('is_active', false)->count();
+    $blockedTeachers = User::where('role', 'teacher')->where('is_active', false)->count();
+
+    // ✅ الطلاب الموقوفين: is_active = false OR عنده اشتراك محظور
+    $blockedStudents = User::where('role', 'student')
+        ->where(function ($q) {
+            $q->where('is_active', false)
+              ->orWhereHas('studentSubscriptions', function ($q2) {
+                  $q2->where('is_banned', true);
+              });
+        })
+        ->distinct('id')
+        ->count();
+
+    // ✅ إجمالي الحسابات الموقوفة
+    $blockedUsers = $blockedAdmins + $blockedTeachers + $blockedStudents;
+
 
         // ✅ إضافة فلترة تلقائية: عرض الحسابات النشطة فقط (ما لم يتم طلب غير ذلك)
         $showBlocked = $request->has('show_blocked') && $request->show_blocked === 'true';
@@ -256,6 +294,7 @@ public function exportBlockedUsers(Request $request)
 
         return response()->json([
             'success' => true,
+            'blocked_users' => $blockedUsers,
             'data' => $users,
             'filters' => [
                 'role' => $request->role,
