@@ -24,6 +24,10 @@ return new class extends Migration
             $table->timestamp('subscribed_at')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->boolean('is_free')->default(false);
+            $table->boolean('is_banned')->default(false);
+            $table->timestamp('banned_at')->nullable();
+            $table->foreignId('banned_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->text('ban_reason')->nullable();
             $table->timestamps();
             
         });

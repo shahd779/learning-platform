@@ -2573,16 +2573,16 @@
         },
         {
             "name": "maatwebsite/excel",
-            "version": "4.0.1",
+            "version": "4.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SpartnerNL/Laravel-Excel.git",
-                "reference": "5d1c617c9fea810d0c547d69d4dfddd3f0a9fea8"
+                "reference": "3f3e73956f87e3d229b244cec8cbc3bbda4fc8dd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SpartnerNL/Laravel-Excel/zipball/5d1c617c9fea810d0c547d69d4dfddd3f0a9fea8",
-                "reference": "5d1c617c9fea810d0c547d69d4dfddd3f0a9fea8",
+                "url": "https://api.github.com/repos/SpartnerNL/Laravel-Excel/zipball/3f3e73956f87e3d229b244cec8cbc3bbda4fc8dd",
+                "reference": "3f3e73956f87e3d229b244cec8cbc3bbda4fc8dd",
                 "shasum": ""
             },
             "require": {
@@ -2646,7 +2646,7 @@
             ],
             "support": {
                 "issues": "https://github.com/SpartnerNL/Laravel-Excel/issues",
-                "source": "https://github.com/SpartnerNL/Laravel-Excel/tree/4.0.1"
+                "source": "https://github.com/SpartnerNL/Laravel-Excel/tree/4.0.2"
             },
             "funding": [
                 {
@@ -2658,7 +2658,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-18T12:32:09+00:00"
+            "time": "2026-08-24T13:06:48+00:00"
         },
         {
             "name": "maennchen/zipstream-php",
