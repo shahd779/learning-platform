@@ -159,4 +159,43 @@ class User extends Authenticatable
         return $grade ? $grade->name : null;
     }
 
+public function teacherSettings()
+{
+    return $this->hasOne(TeacherSetting::class, 'teacher_id');
+}
+
+public function getTeacherSettingsAttribute()
+{
+    // ✅ استخدم firstOrCreate عشان تمنع التكرار
+    return TeacherSetting::firstOrCreate(
+        ['teacher_id' => $this->id],
+        [
+            'videos_active_by_default' => true,
+            'videos_availability' => 'always',
+            'videos_availability_days' => null,
+            'videos_max_watch_count' => null,
+            'files_active_by_default' => true,
+            'files_downloadable_by_default' => true,
+        ]
+    );
+}
+
+public function createDefaultSettings()
+{
+    // ✅ اتأكد إن مفيش سجل موجود قبل ما تعمل واحد جديد
+    $existing = $this->teacherSettings;
+    if ($existing) {
+        return $existing;
+    }
+
+    return $this->teacherSettings()->create([
+        'videos_active_by_default' => true,
+        'videos_availability' => 'always',
+        'videos_availability_days' => null,
+        'videos_max_watch_count' => null,
+        'files_active_by_default' => true,
+        'files_downloadable_by_default' => true,
+    ]);
+}
+
 }

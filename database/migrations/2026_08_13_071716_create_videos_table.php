@@ -40,23 +40,28 @@ return new class extends Migration
             // الموافقة (الأدمن يراجع الفيديوهات فقط)
             $table->enum('status', ['pending', 'approved', 'rejected'])
                   ->default('pending');
-            
+                  
             $table->text('rejection_reason')->nullable(); // سبب الرفض أو طلب التعديل
-            
-            // الأدمن اللي راجع الفيديو
+                  
+                  // الأدمن اللي راجع الفيديو
             $table->foreignId('reviewed_by')
                   ->nullable()
                   ->constrained('users')
                   ->onDelete('set null');
-            
+                  
             $table->timestamp('reviewed_at')->nullable();
-            
-            // المشاهدات
+                  
+                  // المشاهدات
             $table->integer('views_count')->default(0);
-            
-            // هل الفيديو متاح للطلاب ولا لأ (بيتحدد بناءً على status approved)
+                  
+                  // هل الفيديو متاح للطلاب ولا لأ (بيتحدد بناءً على status approved)
             $table->boolean('is_published')->default(false);
-            
+                  
+                  // الإعدادات الخاصة بالفيديو (تتجاوز الإعدادات العامة)
+            $table->boolean('is_active')->default(true);
+            $table->boolean('is_available')->default(true);
+            $table->timestamp('available_until')->nullable();
+            $table->integer('max_watch_count')->nullable();
             $table->timestamps();
             
             // Indexes للبحث السريع
