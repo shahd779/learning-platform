@@ -2,11 +2,8 @@
 
 use App\Http\Controllers\Api\Teacher\AuthController;
 use App\Http\Controllers\Api\Teacher\CourseContentController;
-<<<<<<< HEAD
 use App\Http\Controllers\Api\Teacher\FileController;
-=======
 use App\Http\Controllers\Api\Teacher\StudentsController;
->>>>>>> a28431f2c2f66c644dcf76e30ac4af57947fa0eb
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('teacher')->group(function(){
