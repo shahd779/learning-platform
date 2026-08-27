@@ -49,10 +49,12 @@ Route::prefix('teacher')->group(function(){
 
         // students
         route::prefix('students')->group(function(){
-            Route::get('/stats', [StudentsController::class, 'stats']);
+            // Route::get('/stats', [StudentsController::class, 'stats']);
             Route::get('', [StudentsController::class, 'students']);
-            Route::get('/{id}', [StudentsController::class, 'studentDetails']);
             Route::get('/filter-options', [StudentsController::class, 'filterOptions']);
+            Route::get('/{id}', [StudentsController::class, 'studentDetails']);
+            // ===== Student Results =====
+            Route::get('/{id}/results', [StudentsController::class, 'studentResults']);
         });
        
     });
