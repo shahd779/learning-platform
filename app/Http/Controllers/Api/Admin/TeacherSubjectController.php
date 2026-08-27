@@ -10,9 +10,13 @@ use App\Models\Grade;
 use App\Models\TeacherSubjectGrade;
 use Illuminate\Support\Facades\Validator;
 use App\Models\StudentSubscription;
+use App\LogsActivity;
+
 
 class TeacherSubjectController extends Controller
 {
+    use LogsActivity; // ✅ استخدمنا الـ Trait
+
     /**
      * عرض كل المواد المضافة للمدرسين
      */
@@ -100,6 +104,13 @@ class TeacherSubjectController extends Controller
             'is_active' => $request->is_active ?? true,
         ]);
 
+        // ✅ تسجيل النشاط - إضافة مادة لمدرس
+        $this->logActivity(
+            'إضافة مادة لمدرس',
+            "تم إضافة مادة {$assignment->subject->name} للمدرس {$teacher->name} بواسطة " . auth()->user()->name,
+            'create'
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'تم إضافة المادة للمدرس بنجاح',
@@ -131,20 +142,19 @@ class TeacherSubjectController extends Controller
     /**
      * تحديث ربط (تعديل الكود فقط)
      */
-    public function update(Request $request, $id)
+    public function updateAccessCode(Request $request, $id)
     {
         $assignment = TeacherSubjectGrade::find($id);
 
         if (!$assignment) {
             return response()->json([
                 'success' => false,
-                'message' => 'الربط غير موجود'
+                'message' => 'المادة غير موجودة لهذا المدرس'
             ], 404);
         }
 
         $validator = Validator::make($request->all(), [
-            'access_code' => 'sometimes|string|unique:teacher_subject_grade,access_code,' . $id . '|max:50',
-            'is_active' => 'sometimes|boolean',
+            'access_code' => 'required|string|unique:teacher_subject_grade,access_code,' . $id . '|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -154,14 +164,22 @@ class TeacherSubjectController extends Controller
             ], 422);
         }
 
-        $data = $request->only(['access_code', 'is_active']);
-        $assignment->update($data);
+        $oldCode = $assignment->access_code;
+        $assignment->access_code = $request->access_code;
+        $assignment->save();
+
+        // ✅ تسجيل النشاط - تحديث كود المادة
+        $this->logActivity(
+            'تحديث كود المادة',
+            "تم تحديث كود المادة من {$oldCode} إلى {$request->access_code} بواسطة " . auth()->user()->name,
+            'update'
+        );
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تحديث الربط بنجاح',
-            'data' => $assignment->load(['teacher', 'subject', 'grade'])
-        ]);
+            'message' => 'تم تحديث كود المادة بنجاح',
+            'data' => $assignment,
+        ], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -178,15 +196,17 @@ class TeacherSubjectController extends Controller
             ], 404);
         }
 
-        // التحقق من وجود طلاب مشتركين
-        if ($assignment->subscriptions()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا يمكن حذف هذا الربط لأن هناك طلاب مشتركين'
-            ], 422);
-        }
+        $subjectName = $assignment->subject->name;
+        $teacherName = $assignment->teacher->name;
 
         $assignment->delete();
+
+        // ✅ تسجيل النشاط - حذف مادة من مدرس
+        $this->logActivity(
+            'حذف مادة من مدرس',
+            "تم حذف مادة {$subjectName} من المدرس {$teacherName} بواسطة " . auth()->user()->name,
+            'delete'
+        );
 
         return response()->json([
             'success' => true,
@@ -211,6 +231,14 @@ class TeacherSubjectController extends Controller
         $assignment->is_active = !$assignment->is_active;
         $assignment->save();
 
+        // ✅ تسجيل النشاط - تغيير حالة المادة
+        $statusText = $assignment->is_active ? 'تفعيل' : 'تعطيل';
+        $this->logActivity(
+            $assignment->is_active ? 'تفعيل مادة لمدرس' : 'تعطيل مادة لمدرس',
+            "تم {$statusText} مادة {$assignment->subject->name} للمدرس {$assignment->teacher->name} بواسطة " . auth()->user()->name,
+            'update'
+        );
+
         return response()->json([
             'success' => true,
             'message' => $assignment->is_active ? 'تم تفعيل الربط' : 'تم تعطيل الربط',
@@ -223,9 +251,9 @@ class TeacherSubjectController extends Controller
      */
     public function formData()
     {
-        $teachers = User::where('role', 'teacher')
-            ->where('is_active', true)
-            ->get(['id', 'name', 'phone']);
+        // $teachers = User::where('role', 'teacher')
+        //     ->where('is_active', true)
+        //     ->get(['id', 'name', 'phone']);
 
         $subjects = Subject::where('is_active', true)
             ->get(['id', 'name', 'code']);
@@ -235,7 +263,7 @@ class TeacherSubjectController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'teachers' => $teachers,
+                // 'teachers' => $teachers,
                 'subjects' => $subjects,
                 'grades' => $grades,
             ]
@@ -268,131 +296,80 @@ class TeacherSubjectController extends Controller
         ]);
     }
 
-/**
- * توليد كود مادة تلقائي
- */
-/**
- * توليد كود مادة تلقائي (فريد)
- */
-public function generateCode(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'teacher_id' => 'required|exists:users,id',
-        'subject_id' => 'required|exists:subjects,id',
-        'grade_id' => 'required|exists:grades,id',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'errors' => $validator->errors()
-        ], 422, [], JSON_UNESCAPED_UNICODE);
-    }
-
-    $teacher = User::find($request->teacher_id);
-    $subject = Subject::find($request->subject_id);
-    $grade = Grade::find($request->grade_id);
-
-    // تنظيف اسم المدرس
-    $teacherName = $this->cleanTeacherName($teacher->name);
-    
-    // ============================================
-    // الطريقة 1: باستخدام ID المدرس (الأفضل)
-    // ============================================
-    // MATH-G1-TCH2 (مدرس رقم 2)
-    $code = strtoupper($subject->code) . '-' . $grade->code . '-TCH' . $teacher->id;
-
-    // ============================================
-    // الطريقة 2: باستخدام أول 3 حروف + رقم عشوائي
-    // ============================================
-    // MATH-G1-ALI78
-    // $random = rand(10, 99);
-    // $code = strtoupper($subject->code) . '-' . $grade->code . '-' . 
-    //         strtoupper($teacherName) . $random;
-
-    // ============================================
-    // الطريقة 3: باستخدام الاسم الكامل + رقم تسلسلي
-    // ============================================
-    // MATH-G1-ALIHASSAN
-    // $fullName = strtoupper(str_replace(' ', '', $teacherName));
-    // $code = strtoupper($subject->code) . '-' . $grade->code . '-' . $fullName;
-
-    // ============================================
-    // الطريقة 4: عشوائي بالكامل (غير مرتبط بالاسم)
-    // ============================================
-    // MATH-G1-X7K9L
-    // $random = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 5));
-    // $code = strtoupper($subject->code) . '-' . $grade->code . '-' . $random;
-
-    // التأكد من عدم التكرار
-    $exists = TeacherSubjectGrade::where('access_code', $code)->exists();
-    $counter = 1;
-    while ($exists) {
-        // لو الكود موجود، نضيف رقم عشوائي في الآخر
-        $code = $code . rand(10, 99);
-        $exists = TeacherSubjectGrade::where('access_code', $code)->exists();
-        $counter++;
-        if ($counter > 10) break;
-    }
-
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'access_code' => $code,
-            'teacher' => $teacher->name,
-            'teacher_id' => $teacher->id,
-            'subject' => $subject->name,
-            'grade' => $grade->name,
-        ]
-    ], 200, [], JSON_UNESCAPED_UNICODE);
-}
-
-/**
- * تنظيف اسم المدرس
- */
-private function cleanTeacherName($name)
-{
-    // إزالة الألقاب (د., دكتور, أستاذ, إلخ)
-    $name = preg_replace('/^(د\.|دكتور|أستاذ|الأستاذ|د\s|دكتور\s|أ\.د\.|أستاذ\s|الأستاذ\s)/u', '', $name);
-    
-    // إزالة الرموز الغريبة
-    $name = preg_replace('/[^a-zA-Z0-9\s\x{0600}-\x{06FF}]/u', '', $name);
-    
-    // إزالة المسافات الزائدة
-    $name = preg_replace('/\s+/', ' ', $name);
-    $name = trim($name);
-    
-    return $name;
-}
     /**
-     * جلب كل طلاب مادة معينة لمدرس معين
+     * توليد كود مادة تلقائي (فريد)
      */
-    public function students($id)
+    public function generateCode(Request $request)
     {
-        $assignment = TeacherSubjectGrade::with(['subscriptions.student'])
-            ->find($id);
+        $validator = Validator::make($request->all(), [
+            'teacher_id' => 'required|exists:users,id',
+            'subject_id' => 'required|exists:subjects,id',
+            'grade_id' => 'required|exists:grades,id',
+        ]);
 
-        if (!$assignment) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'الربط غير موجود'
-            ], 404);
+                'errors' => $validator->errors()
+            ], 422, [], JSON_UNESCAPED_UNICODE);
         }
 
-        $students = $assignment->subscriptions()
-            ->with('student')
-            ->where('status', 'active')
-            ->get();
+        $teacher = User::find($request->teacher_id);
+        $subject = Subject::find($request->subject_id);
+        $grade = Grade::find($request->grade_id);
+
+        // تنظيف اسم المدرس
+        $teacherName = $this->cleanTeacherName($teacher->name);
+        
+        // MATH-G1-TCH2 (مدرس رقم 2)
+        $code = strtoupper($subject->code) . '-' . $grade->code . '-TCH' . $teacher->id;
+
+        // التأكد من عدم التكرار
+        $exists = TeacherSubjectGrade::where('access_code', $code)->exists();
+        $counter = 1;
+        while ($exists) {
+            $code = $code . rand(10, 99);
+            $exists = TeacherSubjectGrade::where('access_code', $code)->exists();
+            $counter++;
+            if ($counter > 10) break;
+        }
 
         return response()->json([
             'success' => true,
-            'data' => $students
-        ]);
+            'data' => [
+                'access_code' => $code,
+                'teacher' => $teacher->name,
+                'teacher_id' => $teacher->id,
+                'subject' => $subject->name,
+                'grade' => $grade->name,
+            ]
+        ], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
-     public function teacherDetails($id)
+    /**
+     * تنظيف اسم المدرس
+     */
+    private function cleanTeacherName($name)
     {
-        $teacher = User::with(['teacherSubjects' => function($query) {
+        // إزالة الألقاب (د., دكتور, أستاذ, إلخ)
+        $name = preg_replace('/^(د\.|دكتور|أستاذ|الأستاذ|د\s|دكتور\s|أ\.د\.|أستاذ\s|الأستاذ\s)/u', '', $name);
+        
+        // إزالة الرموز الغريبة
+        $name = preg_replace('/[^a-zA-Z0-9\s\x{0600}-\x{06FF}]/u', '', $name);
+        
+        // إزالة المسافات الزائدة
+        $name = preg_replace('/\s+/', ' ', $name);
+        $name = trim($name);
+        
+        return $name;
+    }
+
+    /**
+     * تفاصيل المدرس
+     */
+    public function teacherDetails($id)
+    {
+        $teacher = User::with(['teacherSubjectGrades' => function($query) {
             $query->with(['subject', 'grade']);
         }])->find($id);
 
@@ -404,50 +381,29 @@ private function cleanTeacherName($name)
         }
 
         // إحصائيات المدرس
-        $totalSubjects = $teacher->teacherSubjects->count();
-        
-        // جلب كل الطلاب المسجلين في مواد المدرس
-        $allStudents = [];
+        $totalSubjects = $teacher->teacherSubjectGrades->count();
         $totalStudents = 0;
         $activeStudents = 0;
         
-        foreach ($teacher->teacherSubjects as $assignment) {
-            $students = StudentSubscription::where('teacher_subject_grade_id', $assignment->id)
-                ->with('student')
-                ->get();
-            
-            $activeCount = $students->where('status', 'active')->count();
+        $subjectsDetails = $teacher->teacherSubjectGrades->map(function($assignment) use (&$totalStudents, &$activeStudents) {
+            $students = StudentSubscription::where('teacher_subject_grade_id', $assignment->id);
             $totalCount = $students->count();
+            $activeCount = $students->where('status', 'active')
+            ->whereHas('student', function ($q) {
+                $q->where('is_active', true);
+            })
+            ->count();
             
-            $allStudents[] = [
-                'assignment_id' => $assignment->id,
+            $totalStudents += $totalCount;
+            $activeStudents += $activeCount;
+            
+            return [
+                'id' => $assignment->id,
                 'subject_name' => $assignment->subject->name,
                 'grade_name' => $assignment->grade->name,
                 'access_code' => $assignment->access_code,
                 'total_students' => $totalCount,
                 'active_students' => $activeCount,
-                'students' => $students->pluck('student'),
-            ];
-            
-            $totalStudents += $totalCount;
-            $activeStudents += $activeCount;
-        }
-
-        // تفاصيل المواد مع إحصائياتها
-        $subjectsDetails = $teacher->teacherSubjects->map(function($assignment) {
-            $students = StudentSubscription::where('teacher_subject_grade_id', $assignment->id);
-            
-            return [
-                'id' => $assignment->id,
-                'subject_name' => $assignment->subject->name,
-                'subject_code' => $assignment->subject->code,
-                'grade_name' => $assignment->grade->name,
-                'grade_code' => $assignment->grade->code,
-                'access_code' => $assignment->access_code,
-                'is_active' => $assignment->is_active,
-                'total_students' => $students->count(),
-                'active_students' => $students->where('status', 'active')->count(),
-                'created_at' => $assignment->created_at,
             ];
         });
 
@@ -459,9 +415,9 @@ private function cleanTeacherName($name)
                     'name' => $teacher->name,
                     'phone' => $teacher->phone,
                     'image' => $teacher->image,
-                    'image_url' => $teacher->image ? asset('storage/' . $teacher->image) : null,
+                    'image_url' => $teacher->image_url,
                     'is_active' => $teacher->is_active,
-                    'created_at' => $teacher->created_at,
+                    'created_at' => $teacher->created_at->format('Y-m-d'),
                     'role' => $teacher->role,
                 ],
                 'stats' => [
@@ -471,50 +427,7 @@ private function cleanTeacherName($name)
                 ],
                 'subjects' => $subjectsDetails,
             ]
-        ]);
-    }
-
-    /**
-     * جلب طلاب مادة معينة لمدرس معين
-     */
-    public function subjectStudents($teacherId, $subjectId)
-    {
-        $assignment = TeacherSubjectGrade::where('teacher_id', $teacherId)
-            ->where('subject_id', $subjectId)
-            ->first();
-
-        if (!$assignment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المادة غير موجودة لهذا المدرس'
-            ], 404);
-        }
-
-        $students = StudentSubscription::where('teacher_subject_grade_id', $assignment->id)
-            ->with('student')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'subject' => $assignment->subject->name,
-                'grade' => $assignment->grade->name,
-                'access_code' => $assignment->access_code,
-                'total_students' => $students->count(),
-                'active_students' => $students->where('status', 'active')->count(),
-                'students' => $students->map(function($subscription) {
-                    return [
-                        'id' => $subscription->student->id,
-                        'name' => $subscription->student->name,
-                        'phone' => $subscription->student->phone,
-                        'image' => $subscription->student->image,
-                        'status' => $subscription->status,
-                        'subscribed_at' => $subscription->subscribed_at,
-                        'expires_at' => $subscription->expires_at,
-                    ];
-                }),
-            ]
-        ]);
+        ], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -579,6 +492,14 @@ private function cleanTeacherName($name)
 
         $teacher->is_active = !$teacher->is_active;
         $teacher->save();
+
+        // ✅ تسجيل النشاط - تغيير حالة المدرس
+        $statusText = $teacher->is_active ? 'تفعيل' : 'تعطيل';
+        $this->logActivity(
+            $teacher->is_active ? 'تفعيل مدرس' : 'تعطيل مدرس',
+            "تم {$statusText} المدرس {$teacher->name} بواسطة " . auth()->user()->name,
+            $teacher->is_active ? 'unban' : 'ban'
+        );
 
         return response()->json([
             'success' => true,

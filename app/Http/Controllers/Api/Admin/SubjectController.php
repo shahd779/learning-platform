@@ -5,11 +5,36 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Subject;
+use App\Models\Grade;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use App\LogsActivity; // ✅ أضفنا
 
 class SubjectController extends Controller
 {
+    use LogsActivity; // ✅ استخدمنا الـ Trait
+
+    /**
+     * إحصائيات المواد والصفوف (شاملة)
+     */
+    public function overview()
+    {
+        $totalSubjects = Subject::count();
+        $totalGrades = Grade::count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'subjects' => [
+                    'total' => $totalSubjects,
+                ],
+                'grades' => [
+                    'total' => $totalGrades,
+                ],
+            ]
+        ], 200, [], JSON_UNESCAPED_UNICODE);
+    }
+
     /**
      * عرض كل المواد
      */
@@ -31,12 +56,19 @@ class SubjectController extends Controller
             });
         }
 
-        $subjects = $query->latest()->paginate($request->per_page ?? 15);
+        // ✅ تحديد عدد النتائج في الصفحة
+        $perPage = $request->has('per_page') ? (int)$request->per_page : 15;
+        
+        // منع القيم الغريبة
+        if ($perPage < 1) $perPage = 1;
+        if ($perPage > 100) $perPage = 100;
+
+        $subjects = $query->latest()->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'data' => $subjects
-        ]);
+        ], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -58,7 +90,6 @@ class SubjectController extends Controller
             ], 422);
         }
 
-
         $subject = Subject::create([
             'name' => $request->name,
             'code' => $request->code,
@@ -66,29 +97,16 @@ class SubjectController extends Controller
             'is_active' => $request->is_active ?? true,
         ]);
 
+        // ✅ تسجيل النشاط - إضافة مادة
+        $this->logActivity(
+            'إضافة مادة جديدة',
+            "تم إضافة مادة جديدة باسم {$request->name} وكود {$request->code} بواسطة " . auth()->user()->name,
+            'create'
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'تم إضافة المادة بنجاح',
-            'data' => $subject
-        ]);
-    }
-
-    /**
-     * عرض مادة معينة
-     */
-    public function show($id)
-    {
-        $subject = Subject::find($id);
-
-        if (!$subject) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المادة غير موجودة'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
             'data' => $subject
         ]);
     }
@@ -126,14 +144,21 @@ class SubjectController extends Controller
 
         // رفع الصورة الجديدة
         if ($request->hasFile('image')) {
-            // حذف الصورة القديمة
             if ($subject->image) {
                 Storage::disk('public')->delete($subject->image);
             }
             $data['image'] = $request->file('image')->store('subjects', 'public');
         }
 
+        $oldName = $subject->name;
         $subject->update($data);
+
+        // ✅ تسجيل النشاط - تحديث مادة
+        $this->logActivity(
+            'تعديل مادة',
+            "تم تعديل بيانات المادة {$oldName} بواسطة " . auth()->user()->name,
+            'update'
+        );
 
         return response()->json([
             'success' => true,
@@ -156,12 +181,20 @@ class SubjectController extends Controller
             ], 404);
         }
 
-        // حذف الصورة
+        $subjectName = $subject->name;
+
         if ($subject->image) {
             Storage::disk('public')->delete($subject->image);
         }
 
         $subject->delete();
+
+        // ✅ تسجيل النشاط - حذف مادة
+        $this->logActivity(
+            'حذف مادة',
+            "تم حذف المادة {$subjectName} بواسطة " . auth()->user()->name,
+            'delete'
+        );
 
         return response()->json([
             'success' => true,
@@ -185,6 +218,14 @@ class SubjectController extends Controller
 
         $subject->is_active = !$subject->is_active;
         $subject->save();
+
+        // ✅ تسجيل النشاط - تغيير حالة المادة
+        $statusText = $subject->is_active ? 'تفعيل' : 'تعطيل';
+        $this->logActivity(
+            $subject->is_active ? 'تفعيل مادة' : 'تعطيل مادة',
+            "تم {$statusText} المادة {$subject->name} بواسطة " . auth()->user()->name,
+            'update'
+        );
 
         return response()->json([
             'success' => true,

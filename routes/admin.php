@@ -13,9 +13,12 @@ use App\Http\Controllers\Api\Admin\PaymentHistoryController;
 use App\Http\Controllers\Api\Admin\SubscriptionController;
 use App\Http\Controllers\Api\Admin\TeacherSubjectController;
 use App\Http\Controllers\Api\Admin\VideoManagementController;
+use App\Http\Controllers\Api\Admin\ActivityLogController;
+
 use models\Grade;
 use App\Models\Subject;
 use App\Models\User;
+
 
 
 
@@ -30,6 +33,7 @@ Route::prefix('admin')->group(function () {
 
     // Routes مفتوحة (تسجيل الدخول)
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/users/students/{studentId}/subscriptions/{subscriptionId}/toggle-ban', [UserController::class, 'toggleStudentSubjectBan']) ->middleware(['auth:sanctum']);
 
     // Routes محمية (تتطلب توكن)
     Route::middleware(['auth:sanctum', 'admin'])->group(function () {
@@ -37,30 +41,48 @@ Route::prefix('admin')->group(function () {
         // ===== Auth =====
         Route::post('/logout', [AuthController::class, 'logout']);
 
+        Route::get('/dashboard', [DashboardController::class, 'index']); 
 
+
+        Route::prefix('users')->group(function () {
           // ===== Users Management =====
-        Route::post('/users', [UserController::class, 'store']);
-        Route::put('/users/{user}', [UserController::class, 'update']);
-        Route::delete('/users/{user}', [UserController::class, 'destroy']);
-        Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus']);
+
+        
+        Route::get('', [UserController::class, 'index']);
+        Route::get('/export', [UserController::class, 'exportUsers']); // ✅ تصدير المستخدمين النشطين
+
+        Route::post('', [UserController::class, 'store']);
+        Route::put('/{user}', [UserController::class, 'update']);
+        Route::delete('/{user}', [UserController::class, 'destroy']);
 
 
+        Route::post('/{id}/toggle-ban', [UserController::class, 'toggleUserBan']);
+    
+       
+        // ✅ الطلاب - كل المواد (دالة واحدة)
+        Route::post('/students/{studentId}/toggle-ban-all', [UserController::class, 'toggleStudentAllBan']);
+        Route::get('/{studentId}/subjects', [UserController::class, 'getStudentSubjects']);
+
+        Route::get('/blocked', [UserController::class, 'blockedUsers']);
+        Route::get('/blocked/export', [UserController::class, 'exportBlockedUsers']); // ✅ تصدير المتوق
+
+        });
+
+        
         Route::get('/stats', [UserController::class, 'stats']);
-        Route::get('/users', [UserController::class, 'index']);
         Route::get('/filter-options', [UserController::class, 'filterOptions']);   
 
 
         Route::get('/grades', [GradeController::class, 'index']);
         Route::post('/grades', [GradeController::class, 'store']);
-        Route::get('/grades/{id}', [GradeController::class, 'show']);
         Route::put('/grades/{id}', [GradeController::class, 'update']);
         Route::delete('/grades/{id}', [GradeController::class, 'destroy']);
 
         // ===== Subjects Management (المواد) =====
+        Route::get('/overview/stats', [SubjectController::class, 'overview']);
+
         Route::get('/subjects', [SubjectController::class, 'index']);
-        // Route::get('/subjects/options', [SubjectController::class, 'options']);
         Route::post('/subjects', [SubjectController::class, 'store']);
-        Route::get('/subjects/{id}', [SubjectController::class, 'show']);
         Route::put('/subjects/{id}', [SubjectController::class, 'update']);
         Route::delete('/subjects/{id}', [SubjectController::class, 'destroy']);
         // Route::post('/subjects/{id}/toggle-status', [SubjectController::class, 'toggleStatus']);
@@ -76,13 +98,32 @@ Route::prefix('admin')->group(function () {
         // Route::post('/teacher-subjects/{id}/toggle-status', [TeacherSubjectController::class, 'toggleStatus']);
         // Route::get('/teacher-subjects/{id}/students', [TeacherSubjectController::class, 'students']);
 
-        // ===== Teacher Details =====
-Route::get('/teachers/{id}/details', [TeacherSubjectController::class, 'teacherDetails']);
-Route::delete('/teacher-subjects/{id}', [TeacherSubjectController::class, 'destroy']);
+        // ===== Teacher Details =====  
+        Route::get('/teachers/{id}/details', [TeacherSubjectController::class, 'teacherDetails']);
+        Route::delete('/teacher-subjects/{id}', [TeacherSubjectController::class, 'destroy']);
+        Route::put('/teacher-subjects/{id}/access-code', [TeacherSubjectController::class, 'updateAccessCode']);
 
-// Route::get('/teachers/{id}/students', [TeacherSubjectController::class, 'teacherStudents']);
-// Route::get('/teachers/{teacherId}/subjects/{subjectId}/students', [TeacherSubjectController::class, 'subjectStudents']);
-Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 'toggleTeacherStatus']);
+
+        // Route::get('/teachers/{id}/students', [TeacherSubjectController::class, 'teacherStudents']);
+        // Route::get('/teachers/{teacherId}/subjects/{subjectId}/students', [TeacherSubjectController::class, 'subjectStudents']);
+        Route::post('/teachers/{id}/toggle-status', [TeacherSubjectController::class, 'toggleTeacherStatus']);
+
+
+
+
+Route::prefix('activity-logs')->group(function () {
+    Route::get('/', [ActivityLogController::class, 'index']);
+    Route::get('/latest', [ActivityLogController::class, 'latest']);
+    Route::get('/filter-options', [ActivityLogController::class, 'filterOptions']);
+    Route::delete('/delete-all', [ActivityLogController::class, 'destroyAll']);
+    Route::get('/export', [ActivityLogController::class, 'export']);
+});
+
+
+
+
+
+
 
 
 //Video Management
