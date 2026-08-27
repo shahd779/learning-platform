@@ -38,6 +38,10 @@ class Video extends Model
         'order' => 'integer',
         'is_published' => 'boolean',
         'reviewed_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+        'available_until' => 'datetime',
     ];
 
     // العلاقات

@@ -19,12 +19,14 @@ return new class extends Migration
     
             $table->string('title');
             $table->string('file_path');
+            $table->string('file_type'); // pdf, docx, xlsx, zip, etc.
+            $table->string('file_type_name')->nullable(); 
             $table->string('file_size'); // حجم الملف بالكيلوبايت
             $table->integer('downloads_count')->default(0);
     
     // إعدادات خاصة بالملف (تتجاوز الإعدادات العامة)
-            $table->boolean('is_active')->default(true);
-            $table->boolean('is_downloadable')->default(true);
+           $table->boolean('is_active')->default(true);
+           $table->boolean('is_downloadable')->default(true);
             $table->timestamps();
         });
     }
