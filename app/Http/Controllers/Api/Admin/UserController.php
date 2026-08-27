@@ -23,116 +23,114 @@ class UserController extends Controller
     /**
      * إحصائيات المستخدمين
      */
-public function stats()
-{
-    $totalUsers = User::count();
-    $admins = User::where('role', 'admin')->count();
-    $teachers = User::where('role', 'teacher')->count();
-    $students = User::where('role', 'student')->count();
+    public function stats()
+    {
+        $totalUsers = User::count();
+        $admins = User::where('role', 'admin')->count();
+        $teachers = User::where('role', 'teacher')->count();
+        $students = User::where('role', 'student')->count();
 
-    // ✅ الحسابات الموقوفة (المدرسين والأدمن: is_active = false)
-    $blockedAdmins = User::where('role', 'admin')->where('is_active', false)->count();
-    $blockedTeachers = User::where('role', 'teacher')->where('is_active', false)->count();
+        // ✅ الحسابات الموقوفة (المدرسين والأدمن: is_active = false)
+        $blockedAdmins = User::where('role', 'admin')->where('is_active', false)->count();
+        $blockedTeachers = User::where('role', 'teacher')->where('is_active', false)->count();
 
-    // ✅ الطلاب الموقوفين: is_active = false OR عنده اشتراك محظور
-    $blockedStudents = User::where('role', 'student')
-        ->where(function ($q) {
-            $q->where('is_active', false)
-              ->orWhereHas('studentSubscriptions', function ($q2) {
-                  $q2->where('is_banned', true);
-              });
-        })
-        ->distinct('id')
-        ->count();
+        // ✅ الطلاب الموقوفين: is_active = false OR عنده اشتراك محظور
+        $blockedStudents = User::where('role', 'student')
+            ->where(function ($q) {
+                $q->where('is_active', false)
+                  ->orWhereHas('studentSubscriptions', function ($q2) {
+                      $q2->where('is_banned', true);
+                  });
+            })
+            ->distinct('id')
+            ->count();
 
-    // ✅ إجمالي الحسابات الموقوفة
-    $blockedUsers = $blockedAdmins + $blockedTeachers + $blockedStudents;
+        // ✅ إجمالي الحسابات الموقوفة
+        $blockedUsers = $blockedAdmins + $blockedTeachers + $blockedStudents;
 
-    // المدرسين النشطين (اللي عندهم مواد)
-    $activeTeachers = TeacherSubjectGrade::distinct('teacher_id')->count();
+        // المدرسين النشطين (اللي عندهم مواد)
+        $activeTeachers = TeacherSubjectGrade::distinct('teacher_id')->count();
 
-    // الطلاب النشطين (اللي عندهم اشتراكات نشطة وغير محظورة)
-    $activeStudents = StudentSubscription::where('status', 'active')
-        ->where('is_banned', false)
-        ->distinct('student_id')
-        ->count();
+        // الطلاب النشطين (اللي عندهم اشتراكات نشطة وغير محظورة)
+        $activeStudents = StudentSubscription::where('status', 'active')
+            ->where('is_banned', false)
+            ->distinct('student_id')
+            ->count();
 
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'total_users' => $totalUsers,
-            'admins' => $admins,
-            'teachers' => $teachers,
-            'students' => $students,
-            'blocked_users' => $blockedUsers,
-        ]
-    ]);
-}
-
-
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_users' => $totalUsers,
+                'admins' => $admins,
+                'teachers' => $teachers,
+                'students' => $students,
+                'blocked_users' => $blockedUsers,
+            ]
+        ]);
+    }
 
     public function exportUsers(Request $request)
-{
-    try {
-        $fileName = 'المستخدمين_' . date('Y_m_d') . '.xlsx';
-        $filePath = 'exports/' . $fileName;
-        
-        // ✅ تخزين الملف
-        Excel::store(new UsersExport($request), $filePath, 'public');
-        
-        // ✅ جلب الرابط
-        $fileUrl = url('/storage/' . $filePath);
-        $expiresAt = now()->addDay();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'تم تصدير الملف بنجاح',
-            'data' => [
-                'file_name' => $fileName,
-                'file_url' => $fileUrl,
-                'expires_at' => $expiresAt,
-            ]
-        ], 200, [], JSON_UNESCAPED_UNICODE);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'حدث خطأ أثناء التصدير: ' . $e->getMessage()
-        ], 500);
+    {
+        try {
+            $fileName = 'المستخدمين_' . date('Y_m_d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+            
+            // ✅ تخزين الملف
+            Excel::store(new UsersExport($request), $filePath, 'public');
+            
+            // ✅ جلب الرابط
+            $fileUrl = url('/storage/' . $filePath);
+            $expiresAt = now()->addDay();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تصدير الملف بنجاح',
+                'data' => [
+                    'file_name' => $fileName,
+                    'file_url' => $fileUrl,
+                    'expires_at' => $expiresAt,
+                ]
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء التصدير: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
 
-/**
- * تصدير المستخدمين المتوقفين (يرجع رابط تحميل)
- */
-public function exportBlockedUsers(Request $request)
-{
-    try {
-        $fileName = 'المستخدمين_المتوقفين_' . date('Y_m_d') . '.xlsx';
-        $filePath = 'exports/' . $fileName;
-        
-        // ✅ تخزين الملف
-        Excel::store(new BlockedUsersExport($request), $filePath, 'public');
-        
-        // ✅ جلب الرابط
-        $fileUrl = url('/storage/' . $filePath);
-        $expiresAt = now()->addDay();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'تم تصدير الملف بنجاح',
-            'data' => [
-                'file_name' => $fileName,
-                'file_url' => $fileUrl,
-                'expires_at' => $expiresAt,
-            ]
-        ], 200, [], JSON_UNESCAPED_UNICODE);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'حدث خطأ أثناء التصدير: ' . $e->getMessage()
-        ], 500);
+    /**
+     * تصدير المستخدمين المتوقفين (يرجع رابط تحميل)
+     */
+    public function exportBlockedUsers(Request $request)
+    {
+        try {
+            $fileName = 'المستخدمين_المتوقفين_' . date('Y_m_d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+            
+            // ✅ تخزين الملف
+            Excel::store(new BlockedUsersExport($request), $filePath, 'public');
+            
+            // ✅ جلب الرابط
+            $fileUrl = url('/storage/' . $filePath);
+            $expiresAt = now()->addDay();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تصدير الملف بنجاح',
+                'data' => [
+                    'file_name' => $fileName,
+                    'file_url' => $fileUrl,
+                    'expires_at' => $expiresAt,
+                ]
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء التصدير: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
 
     /**
      * عرض كل المستخدمين مع فلترة وبحث
@@ -141,25 +139,23 @@ public function exportBlockedUsers(Request $request)
     {
         $query = User::query();
 
-        
-    // ✅ الحسابات الموقوفة (المدرسين والأدمن: is_active = false)
-    $blockedAdmins = User::where('role', 'admin')->where('is_active', false)->count();
-    $blockedTeachers = User::where('role', 'teacher')->where('is_active', false)->count();
+        // ✅ الحسابات الموقوفة (المدرسين والأدمن: is_active = false)
+        $blockedAdmins = User::where('role', 'admin')->where('is_active', false)->count();
+        $blockedTeachers = User::where('role', 'teacher')->where('is_active', false)->count();
 
-    // ✅ الطلاب الموقوفين: is_active = false OR عنده اشتراك محظور
-    $blockedStudents = User::where('role', 'student')
-        ->where(function ($q) {
-            $q->where('is_active', false)
-              ->orWhereHas('studentSubscriptions', function ($q2) {
-                  $q2->where('is_banned', true);
-              });
-        })
-        ->distinct('id')
-        ->count();
+        // ✅ الطلاب الموقوفين: is_active = false OR عنده اشتراك محظور
+        $blockedStudents = User::where('role', 'student')
+            ->where(function ($q) {
+                $q->where('is_active', false)
+                  ->orWhereHas('studentSubscriptions', function ($q2) {
+                      $q2->where('is_banned', true);
+                  });
+            })
+            ->distinct('id')
+            ->count();
 
-    // ✅ إجمالي الحسابات الموقوفة
-    $blockedUsers = $blockedAdmins + $blockedTeachers + $blockedStudents;
-
+        // ✅ إجمالي الحسابات الموقوفة
+        $blockedUsers = $blockedAdmins + $blockedTeachers + $blockedStudents;
 
         // ✅ إضافة فلترة تلقائية: عرض الحسابات النشطة فقط (ما لم يتم طلب غير ذلك)
         $showBlocked = $request->has('show_blocked') && $request->show_blocked === 'true';
@@ -173,16 +169,15 @@ public function exportBlockedUsers(Request $request)
             $query->where('role', $request->role);
         }
 
-        // ✅ فلترة حسب حالة اشتراك الطالب (تم التعديل)
+        // ✅ فلترة حسب حالة اشتراك الطالب
         if ($request->has('subscription_status') && $request->subscription_status !== 'all') {
             $subscriptionStatus = $request->subscription_status;
-            
             $query->whereHas('studentSubscriptions', function ($q) use ($subscriptionStatus) {
                 $q->where('status', $subscriptionStatus);
             });
         }
 
-        // ✅ فلترة حسب تاريخ الاشتراك (تم التعديل)
+        // ✅ فلترة حسب تاريخ الاشتراك
         if ($request->has('subscribed_from') && $request->subscribed_from) {
             $query->whereHas('studentSubscriptions', function ($q) use ($request) {
                 $q->whereDate('subscribed_at', '>=', $request->subscribed_from);
@@ -195,7 +190,7 @@ public function exportBlockedUsers(Request $request)
             });
         }
 
-        // ✅ فلترة حسب تاريخ انتهاء الاشتراك (تم التعديل)
+        // ✅ فلترة حسب تاريخ انتهاء الاشتراك
         if ($request->has('expires_from') && $request->expires_from) {
             $query->whereHas('studentSubscriptions', function ($q) use ($request) {
                 $q->whereDate('expires_at', '>=', $request->expires_from);
@@ -225,7 +220,7 @@ public function exportBlockedUsers(Request $request)
         $perPage = $request->per_page ?? 10;
         $users = $query->paginate($perPage);
 
-        // إضافة بيانات مختلفة حسب الدور
+        // إضافة بيانات مختلفة حسب الدور مع التحقق من null
         $users->getCollection()->transform(function ($user) {
             
             $userData = [
@@ -245,7 +240,7 @@ public function exportBlockedUsers(Request $request)
                 
                 $userData['subjects'] = $subjects->map(function($item) {
                     return [
-                        'subject' => $item->subject->name,
+                        'subject' => $item->subject->name ?? 'محذوف',
                     ];
                 });
                 $userData['start_date'] = $user->created_at->format('Y-m-d');
@@ -256,13 +251,20 @@ public function exportBlockedUsers(Request $request)
                     ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade', 'teacherSubjectGrade.teacher'])
                     ->get();
                 
-                $userData['subscriptions'] = $subscriptions->map(function($subscription) {
+                // ✅ فلترة الاشتراكات اللي فيها بيانات كاملة
+                $validSubscriptions = $subscriptions->filter(function($subscription) {
+                    return $subscription->teacherSubjectGrade !== null 
+                        && $subscription->teacherSubjectGrade->subject !== null
+                        && $subscription->teacherSubjectGrade->grade !== null;
+                });
+
+                $userData['subscriptions'] = $validSubscriptions->map(function($subscription) {
                     return [
                         'id' => $subscription->id,
-                        'subject' => $subscription->teacherSubjectGrade->subject->name,
-                        'grade' => $subscription->teacherSubjectGrade->grade->name,
-                        'teacher' => $subscription->teacherSubjectGrade->teacher->name,
-                        'access_code' => $subscription->teacherSubjectGrade->access_code,
+                        'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
+                        'grade' => $subscription->teacherSubjectGrade->grade->name ?? 'محذوف',
+                        'teacher' => $subscription->teacherSubjectGrade->teacher->name ?? 'محذوف',
+                        'access_code' => $subscription->teacherSubjectGrade->access_code ?? '-',
                         'package_id' => $subscription->package_id,
                         'status' => $subscription->status,
                         'subscribed_at' => $subscription->subscribed_at ? $subscription->subscribed_at->format('Y-m-d') : null,
@@ -270,18 +272,27 @@ public function exportBlockedUsers(Request $request)
                     ];
                 });
                 
-                $lastActive = $subscriptions->where('status', 'active')->first();
+                // ✅ آخر اشتراك نشط مع التحقق من null
+                $lastActive = $subscriptions->where('status', 'active')
+                    ->filter(function($sub) {
+                        return $sub->teacherSubjectGrade !== null 
+                            && $sub->teacherSubjectGrade->subject !== null;
+                    })
+                    ->first();
+                    
                 if ($lastActive) {
                     $userData['last_subscription'] = [
-                        'subject' => $lastActive->teacherSubjectGrade->subject->name,
-                        'grade' => $lastActive->teacherSubjectGrade->grade->name,
-                        'teacher' => $lastActive->teacherSubjectGrade->teacher->name,
-                        'access_code' => $lastActive->teacherSubjectGrade->access_code,
+                        'subject' => $lastActive->teacherSubjectGrade->subject->name ?? 'محذوف',
+                        'grade' => $lastActive->teacherSubjectGrade->grade->name ?? 'محذوف',
+                        'teacher' => $lastActive->teacherSubjectGrade->teacher->name ?? 'محذوف',
+                        'access_code' => $lastActive->teacherSubjectGrade->access_code ?? '-',
                         'status' => $lastActive->status,
                         'package_id' => $lastActive->package_id,
                         'subscribed_at' => $lastActive->subscribed_at ? $lastActive->subscribed_at->format('Y-m-d') : null,
                         'expires_at' => $lastActive->expires_at ? $lastActive->expires_at->format('Y-m-d') : null,
                     ];
+                } else {
+                    $userData['last_subscription'] = null;
                 }
             }
 
@@ -392,7 +403,7 @@ public function exportBlockedUsers(Request $request)
         $perPage = $request->per_page ?? 10;
         $users = $query->paginate($perPage);
 
-        // ✅ تحويل البيانات
+        // ✅ تحويل البيانات مع التحقق من null
         $users->getCollection()->transform(function ($user) {
             
             $userData = [
@@ -414,8 +425,8 @@ public function exportBlockedUsers(Request $request)
                 
                 $userData['subjects'] = $subjects->map(function($item) {
                     return [
-                        'subject' => $item->subject->name,
-                        'grade' => $item->grade->name,
+                        'subject' => $item->subject->name ?? 'محذوف',
+                        'grade' => $item->grade->name ?? 'محذوف',
                         'is_active' => $item->is_active,
                     ];
                 });
@@ -429,25 +440,32 @@ public function exportBlockedUsers(Request $request)
                     ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade', 'teacherSubjectGrade.teacher'])
                     ->get();
 
-                $bannedSubscriptions = $subscriptions->filter(function($sub) {
+                // ✅ فلترة الاشتراكات اللي فيها بيانات كاملة
+                $validSubscriptions = $subscriptions->filter(function($sub) {
+                    return $sub->teacherSubjectGrade !== null 
+                        && $sub->teacherSubjectGrade->subject !== null
+                        && $sub->teacherSubjectGrade->grade !== null;
+                });
+
+                $bannedSubscriptions = $validSubscriptions->filter(function($sub) {
                     return $sub->is_banned == true;
                 });
 
-                $activeSubscriptions = $subscriptions->filter(function($sub) {
+                $activeSubscriptions = $validSubscriptions->filter(function($sub) {
                     return $sub->is_banned == false && $sub->status === 'active';
                 });
 
-                $expiredSubscriptions = $subscriptions->filter(function($sub) {
+                $expiredSubscriptions = $validSubscriptions->filter(function($sub) {
                     return $sub->status === 'expired';
                 });
 
                 $userData['banned_subjects'] = $bannedSubscriptions->map(function($subscription) {
                     return [
                         'subscription_id' => $subscription->id,
-                        'subject' => $subscription->teacherSubjectGrade->subject->name,
-                        'grade' => $subscription->teacherSubjectGrade->grade->name,
-                        'teacher' => $subscription->teacherSubjectGrade->teacher->name,
-                        'access_code' => $subscription->teacherSubjectGrade->access_code,
+                        'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
+                        'grade' => $subscription->teacherSubjectGrade->grade->name ?? 'محذوف',
+                        'teacher' => $subscription->teacherSubjectGrade->teacher->name ?? 'محذوف',
+                        'access_code' => $subscription->teacherSubjectGrade->access_code ?? '-',
                         'status' => $subscription->status,
                         'package_id' => $subscription->package_id,
                         'banned_by' => $subscription->banned_by ? User::find($subscription->banned_by)->name : null,
@@ -460,10 +478,10 @@ public function exportBlockedUsers(Request $request)
                 $userData['active_subjects'] = $activeSubscriptions->map(function($subscription) {
                     return [
                         'subscription_id' => $subscription->id,
-                        'subject' => $subscription->teacherSubjectGrade->subject->name,
-                        'grade' => $subscription->teacherSubjectGrade->grade->name,
-                        'teacher' => $subscription->teacherSubjectGrade->teacher->name,
-                        'access_code' => $subscription->teacherSubjectGrade->access_code,
+                        'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
+                        'grade' => $subscription->teacherSubjectGrade->grade->name ?? 'محذوف',
+                        'teacher' => $subscription->teacherSubjectGrade->teacher->name ?? 'محذوف',
+                        'access_code' => $subscription->teacherSubjectGrade->access_code ?? '-',
                         'status' => $subscription->status,
                         'subscribed_at' => $subscription->subscribed_at ? $subscription->subscribed_at->format('Y-m-d') : null,
                         'expires_at' => $subscription->expires_at ? $subscription->expires_at->format('Y-m-d') : null,
@@ -473,16 +491,16 @@ public function exportBlockedUsers(Request $request)
                 $userData['expired_subjects'] = $expiredSubscriptions->map(function($subscription) {
                     return [
                         'subscription_id' => $subscription->id,
-                        'subject' => $subscription->teacherSubjectGrade->subject->name,
-                        'grade' => $subscription->teacherSubjectGrade->grade->name,
-                        'teacher' => $subscription->teacherSubjectGrade->teacher->name,
+                        'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
+                        'grade' => $subscription->teacherSubjectGrade->grade->name ?? 'محذوف',
+                        'teacher' => $subscription->teacherSubjectGrade->teacher->name ?? 'محذوف',
                         'status' => $subscription->status,
                         'subscribed_at' => $subscription->subscribed_at ? $subscription->subscribed_at->format('Y-m-d') : null,
                         'expires_at' => $subscription->expires_at ? $subscription->expires_at->format('Y-m-d') : null,
                     ];
                 });
 
-                $userData['total_subscriptions'] = $subscriptions->count();
+                $userData['total_subscriptions'] = $validSubscriptions->count();
                 $userData['banned_count'] = $bannedSubscriptions->count();
                 $userData['active_count'] = $activeSubscriptions->count();
                 $userData['expired_count'] = $expiredSubscriptions->count();
@@ -632,10 +650,10 @@ public function exportBlockedUsers(Request $request)
                 ],
                 'subscription' => isset($subscription) ? [
                     'id' => $subscription->id,
-                    'subject' => $teacherSubjectGrade->subject->name,
-                    'grade' => $teacherSubjectGrade->grade->name,
-                    'teacher' => $teacherSubjectGrade->teacher->name,
-                    'access_code' => $teacherSubjectGrade->access_code,
+                    'subject' => $teacherSubjectGrade->subject->name ?? 'محذوف',
+                    'grade' => $teacherSubjectGrade->grade->name ?? 'محذوف',
+                    'teacher' => $teacherSubjectGrade->teacher->name ?? 'محذوف',
+                    'access_code' => $teacherSubjectGrade->access_code ?? '-',
                     'status' => $subscription->status,
                     'expires_at' => $subscription->expires_at,
                 ] : null,
@@ -648,7 +666,7 @@ public function exportBlockedUsers(Request $request)
      */
     public function show($id)
     {
-        $user = User::with(['teacherSubjects', 'subscriptions'])->find($id);
+        $user = User::with(['teacherSubjects', 'studentSubscriptions'])->find($id);
 
         if (!$user) {
             return response()->json([
@@ -756,13 +774,20 @@ public function exportBlockedUsers(Request $request)
             ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade', 'teacherSubjectGrade.teacher'])
             ->get();
 
-        return $subscriptions->map(function($subscription) {
+        // ✅ فلترة الاشتراكات اللي فيها بيانات كاملة
+        $validSubscriptions = $subscriptions->filter(function($subscription) {
+            return $subscription->teacherSubjectGrade !== null 
+                && $subscription->teacherSubjectGrade->subject !== null
+                && $subscription->teacherSubjectGrade->grade !== null;
+        });
+
+        return $validSubscriptions->map(function($subscription) {
             return [
                 'id' => $subscription->id,
-                'subject' => $subscription->teacherSubjectGrade->subject->name,
-                'grade' => $subscription->teacherSubjectGrade->grade->name,
-                'teacher' => $subscription->teacherSubjectGrade->teacher->name,
-                'access_code' => $subscription->teacherSubjectGrade->access_code,
+                'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
+                'grade' => $subscription->teacherSubjectGrade->grade->name ?? 'محذوف',
+                'teacher' => $subscription->teacherSubjectGrade->teacher->name ?? 'محذوف',
+                'access_code' => $subscription->teacherSubjectGrade->access_code ?? '-',
                 'status' => $subscription->status,
                 'subscribed_at' => $subscription->subscribed_at,
                 'expires_at' => $subscription->expires_at,
@@ -828,6 +853,14 @@ public function exportBlockedUsers(Request $request)
             ], 404);
         }
 
+        // ✅ التحقق من وجود teacher_subject_grade
+        if (!$subscription->teacherSubjectGrade) {
+            return response()->json([
+                'success' => false,
+                'message' => 'البيانات غير مكتملة، يرجى التواصل مع الدعم'
+            ], 422);
+        }
+
         $currentUser = auth()->user();
 
         if ($currentUser->role === 'teacher') {
@@ -868,8 +901,8 @@ public function exportBlockedUsers(Request $request)
             'success' => true,
             'message' => $subscription->is_banned ? 'تم حظر الطالب من هذه المادة' : 'تم فك الحظر عن الطالب من هذه المادة',
             'data' => [
-                'student' => $subscription->student->name,
-                'subject' => $subscription->teacherSubjectGrade->subject->name,
+                'student' => $subscription->student->name ?? 'محذوف',
+                'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
                 'is_banned' => $subscription->is_banned,
                 'action_by' => $currentUser->name,
             ]
@@ -1037,43 +1070,44 @@ public function exportBlockedUsers(Request $request)
     }
 
     /**
- * جلب كل المواد المشترك فيها طالب معين (للدروب داون)
- */
-/**
- * جلب كل المواد المشترك فيها طالب معين (للدروب داون)
- */
-public function getStudentSubjects($studentId)
-{
-    $student = User::where('role', 'student')->find($studentId);
+     * جلب كل المواد المشترك فيها طالب معين (للدروب داون)
+     */
+    public function getStudentSubjects($studentId)
+    {
+        $student = User::where('role', 'student')->find($studentId);
 
-    if (!$student) {
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'الطالب غير موجود'
+            ], 404);
+        }
+
+        $subscriptions = StudentSubscription::where('student_id', $studentId)
+            ->where('status', 'active')
+            ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade', 'teacherSubjectGrade.teacher'])
+            ->get();
+
+        // ✅ فلترة الاشتراكات اللي فيها بيانات كاملة
+        $validSubscriptions = $subscriptions->filter(function($subscription) {
+            return $subscription->teacherSubjectGrade !== null 
+                && $subscription->teacherSubjectGrade->subject !== null
+                && $subscription->teacherSubjectGrade->grade !== null;
+        });
+
         return response()->json([
-            'success' => false,
-            'message' => 'الطالب غير موجود'
-        ], 404);
+            'success' => true,
+            'data' => $validSubscriptions->map(function($subscription) {
+                return [
+                    'subscription_id' => $subscription->id,
+                    'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
+                    'grade' => $subscription->teacherSubjectGrade->grade->name ?? 'محذوف',
+                    'teacher' => $subscription->teacherSubjectGrade->teacher->name ?? 'محذوف',
+                    'access_code' => $subscription->teacherSubjectGrade->access_code ?? '-',
+                    'is_banned' => $subscription->is_banned,
+                    'status' => $subscription->status,
+                ];
+            })
+        ], 200, [], JSON_UNESCAPED_UNICODE);
     }
-
-    $subscriptions = StudentSubscription::where('student_id', $studentId)
-        ->where('status', 'active')
-        ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade', 'teacherSubjectGrade.teacher'])
-        ->get();
-
-    // ✅ فلترة الاشتراكات اللي فيها بيانات كاملة
-    $validSubscriptions = $subscriptions->filter(function($subscription) {
-        return $subscription->teacherSubjectGrade !== null 
-            && $subscription->teacherSubjectGrade->subject !== null
-            && $subscription->teacherSubjectGrade->grade !== null;
-    });
-
-    return response()->json([
-        'success' => true,
-        'data' => $validSubscriptions->map(function($subscription) {
-            return [
-                'subscription_id' => $subscription->id,
-                'subject' => $subscription->teacherSubjectGrade->subject->name ?? 'محذوف',
-                
-            ];
-        })
-    ], 200, [], JSON_UNESCAPED_UNICODE);
-}
 }

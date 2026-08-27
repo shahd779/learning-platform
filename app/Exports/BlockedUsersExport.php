@@ -3,7 +3,7 @@
 namespace App\Exports;
 
 use App\Models\User;
-use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -11,8 +11,9 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use App\Models\TeacherSubjectGrade;
 use App\Models\StudentSubscription;
+use Illuminate\Support\Collection;
 
-class BlockedUsersExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
+class BlockedUsersExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
     protected $request;
 
@@ -21,7 +22,7 @@ class BlockedUsersExport implements FromQuery, WithHeadings, WithMapping, Should
         $this->request = $request;
     }
 
-    public function query(): \Illuminate\Database\Eloquent\Builder
+    public function collection(): Collection
     {
         $query = User::query();
 
@@ -53,40 +54,14 @@ class BlockedUsersExport implements FromQuery, WithHeadings, WithMapping, Should
             });
         }
 
-        return $query->orderBy('created_at', 'desc');
+        return $query->orderBy('created_at', 'desc')->get();
     }
 
     public function map($user): array
     {
         $roles = ['admin' => 'مدير', 'teacher' => 'مدرس', 'student' => 'طالب'];
         
-        // ✅ نوع الحظر
-        $banType = '';
-        $banDetails = [];
-        
-        if ($user->role === 'student') {
-            $bannedSubscriptions = StudentSubscription::where('student_id', $user->id)
-                ->where('is_banned', true)
-                ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade'])
-                ->get();
-            
-            $hasBanned = $bannedSubscriptions->count() > 0;
-            
-            if (!$user->is_active) {
-                $banType = 'حساب موقوف كلياً';
-            } elseif ($hasBanned) {
-                $banType = 'مواد محظورة';
-                $banDetails = $bannedSubscriptions->map(function($sub) {
-                    return $sub->teacherSubjectGrade->subject->name . ' (' . $sub->teacherSubjectGrade->grade->name . ')';
-                })->toArray();
-            } else {
-                $banType = 'بدون حظر';
-            }
-        } elseif (in_array($user->role, ['admin', 'teacher']) && !$user->is_active) {
-            $banType = 'حساب موقوف';
-        }
-
-        // ✅ الحالة (زي صفحة المستخدمين)
+        // ✅ الحالة حسب الدور
         $status = '';
         if ($user->role === 'student') {
             $subscription = StudentSubscription::where('student_id', $user->id)
@@ -94,7 +69,7 @@ class BlockedUsersExport implements FromQuery, WithHeadings, WithMapping, Should
                 ->where('is_banned', false)
                 ->first();
             
-            if ($subscription) {
+            if ($subscription && $subscription->teacherSubjectGrade) {
                 $status = 'اشتراك نشط';
             } else {
                 $hasExpired = StudentSubscription::where('student_id', $user->id)
@@ -118,18 +93,46 @@ class BlockedUsersExport implements FromQuery, WithHeadings, WithMapping, Should
             $status = $user->is_active ? 'نشط' : 'موقوف';
         }
 
-        // ✅ المواد المحظورة (نص)
+        // ✅ نوع الحظر
+        $banType = '';
+        $banDetails = [];
+        
+        if ($user->role === 'student') {
+            $bannedSubscriptions = StudentSubscription::where('student_id', $user->id)
+                ->where('is_banned', true)
+                ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade'])
+                ->get();
+            
+            foreach ($bannedSubscriptions as $sub) {
+                if ($sub->teacherSubjectGrade && $sub->teacherSubjectGrade->subject && $sub->teacherSubjectGrade->grade) {
+                    $banDetails[] = ($sub->teacherSubjectGrade->subject->name ?? 'محذوف') . ' (' . ($sub->teacherSubjectGrade->grade->name ?? 'محذوف') . ')';
+                }
+            }
+            
+            $hasBanned = count($banDetails) > 0;
+            
+            if (!$user->is_active) {
+                $banType = 'حساب موقوف كلياً';
+            } elseif ($hasBanned) {
+                $banType = 'مواد محظورة';
+            } else {
+                $banType = 'بدون حظر';
+            }
+        } elseif (in_array($user->role, ['admin', 'teacher']) && !$user->is_active) {
+            $banType = 'حساب موقوف';
+        }
+
         $bannedSubjects = !empty($banDetails) ? implode(' - ', $banDetails) : '-';
 
         return [
             $user->id,
-            $user->name,
-            $user->phone,
+            $user->name ?? '-',
+            $user->phone ?? '-',
             $roles[$user->role] ?? $user->role,
-            $status, // ✅ حالة الاشتراك (للطالب) / حالة الحساب (للمدرس والأدمن)
-            $banType, // ✅ نوع الحظر
-            $bannedSubjects, // ✅ المواد المحظورة
-            $user->created_at->format('Y/m/d'),
+            $status ?: '-',
+            $banType ?: '-',
+            $bannedSubjects,
+            $user->created_at ? $user->created_at->format('Y/m/d') : '-',
         ];
     }
 

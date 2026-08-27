@@ -53,13 +53,13 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
         // ✅ الحالة حسب الدور
         $status = '';
         if ($user->role === 'student') {
-            // حالة الاشتراك للطالب
+            // ✅ التحقق من وجود اشتراكات قبل محاولة قراءة البيانات
             $subscription = StudentSubscription::where('student_id', $user->id)
                 ->where('status', 'active')
                 ->where('is_banned', false)
                 ->first();
             
-            if ($subscription) {
+            if ($subscription && $subscription->teacherSubjectGrade) {
                 $status = 'اشتراك نشط';
             } else {
                 $hasExpired = StudentSubscription::where('student_id', $user->id)
@@ -83,21 +83,27 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
             $status = $user->is_active ? 'نشط' : 'موقوف';
         }
 
-        // ✅ المواد أو الاشتراكات
+        // ✅ المواد أو الاشتراكات (مع التحقق من null)
         $subjectsInfo = '';
         if ($user->role === 'teacher') {
             $subjects = TeacherSubjectGrade::where('teacher_id', $user->id)
                 ->with(['subject', 'grade'])
                 ->get();
-            $subjectsInfo = $subjects->map(function($item) {
-                return $item->subject->name . ' (' . $item->grade->name . ')';
+            $subjectsInfo = $subjects->filter(function($item) {
+                return $item->subject !== null && $item->grade !== null;
+            })->map(function($item) {
+                return ($item->subject->name ?? 'محذوف') . ' (' . ($item->grade->name ?? 'محذوف') . ')';
             })->implode(' - ');
         } elseif ($user->role === 'student') {
             $subscriptions = StudentSubscription::where('student_id', $user->id)
                 ->with(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade'])
                 ->get();
-            $subjectsInfo = $subscriptions->map(function($item) {
-                return $item->teacherSubjectGrade->subject->name . ' (' . $item->teacherSubjectGrade->grade->name . ')';
+            $subjectsInfo = $subscriptions->filter(function($item) {
+                return $item->teacherSubjectGrade !== null 
+                    && $item->teacherSubjectGrade->subject !== null
+                    && $item->teacherSubjectGrade->grade !== null;
+            })->map(function($item) {
+                return ($item->teacherSubjectGrade->subject->name ?? 'محذوف') . ' (' . ($item->teacherSubjectGrade->grade->name ?? 'محذوف') . ')';
             })->implode(' - ');
         } else {
             $subjectsInfo = '-';
@@ -108,8 +114,8 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
             $user->name,
             $user->phone,
             $roles[$user->role] ?? $user->role,
-            $status, // ✅ الحالة (حسب الدور)
-            $subjectsInfo, // ✅ المواد / الاشتراكات
+            $status,
+            $subjectsInfo ?: '-',
             $user->created_at->format('Y/m/d'),
         ];
     }

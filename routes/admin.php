@@ -54,6 +54,7 @@ Route::prefix('admin')->group(function () {
         Route::post('', [UserController::class, 'store']);
         Route::put('/{user}', [UserController::class, 'update']);
         Route::delete('/{user}', [UserController::class, 'destroy']);
+        
 
 
         Route::post('/{id}/toggle-ban', [UserController::class, 'toggleUserBan']);
@@ -66,6 +67,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/blocked', [UserController::class, 'blockedUsers']);
         Route::get('/blocked/export', [UserController::class, 'exportBlockedUsers']); // ✅ تصدير المتوق
 
+        Route::get('/{user}', [UserController::class, 'show']);
         });
 
         
