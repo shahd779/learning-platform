@@ -181,21 +181,36 @@ class VideoManagementController extends Controller
 
 public function show($id)
 {
-    $video = Video::with([
+    $user = auth()->user();
+
+    // =============================================
+    // بناء الاستعلام حسب دور المستخدم
+    // =============================================
+    $query = Video::with([
         'teacher:id,name,image',
         'subject:id,name',
         'teacherSubjectGrade.grade:id,name',
         'reviewer:id,name'
-    ])->find($id);
+    ]);
+
+    // ✅ لو مدرس → يشوف فيديوهاته بس
+    // ✅ لو أدمن → يشوف كل الفيديوهات
+    if ($user->role === 'teacher') {
+        $query->where('teacher_id', $user->id);
+    }
+
+    $video = $query->find($id);
 
     if (!$video) {
         return response()->json([
             'success' => false,
-            'message' => 'الفيديو غير موجود'
+            'message' => 'الفيديو غير موجود أو غير مسموح لك بمشاهدته',
         ], 404);
     }
 
+    // =============================================
     // تجهيز رابط الفيديو للتشغيل
+    // =============================================
     $videoUrl = null;
     if ($video->video_path) {
         $videoUrl = asset('storage/' . $video->video_path);
@@ -207,7 +222,9 @@ public function show($id)
         $thumbnailUrl = asset('storage/' . $video->thumbnail);
     }
 
-    // ✅ جلب تقدم المشاهدة للأدمن الحالي
+    // =============================================
+    // جلب تقدم المشاهدة للمستخدم الحالي
+    // =============================================
     $progress = \App\Models\VideoProgress::where('video_id', $id)
         ->where('user_id', auth()->id())
         ->first();
@@ -245,7 +262,6 @@ public function show($id)
                 'name' => $video->reviewer->name,
             ] : null,
             'reviewed_at' => $video->reviewed_at ? $video->reviewed_at->format('Y-m-d H:i:s') : null,
-            // ✅ تقدم المشاهدة
             'progress' => $progress ? [
                 'last_position' => $progress->last_position,
                 'progress_percentage' => $progress->progress_percentage,

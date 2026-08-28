@@ -15,12 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('teacher_id')->constrained('users')->onDelete('cascade');
   
-            $table->boolean('videos_active_by_default')->default(true);
             $table->enum('videos_availability', ['always', 'limited'])->default('always');
             $table->integer('videos_availability_days')->nullable(); // لو limited
             $table->integer('videos_max_watch_count')->nullable(); // null = غير محدود
     
-            $table->boolean('files_active_by_default')->default(true);
             $table->boolean('files_downloadable_by_default')->default(true);
 
             $table->timestamps();

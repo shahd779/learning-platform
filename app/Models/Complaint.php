@@ -17,7 +17,6 @@ class Complaint extends Model
         'description',
         'attachment',
         'status',
-        'admin_response',
         'resolved_by',
         'resolved_at',
     ];

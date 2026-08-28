@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\VideoManagementController;
+use App\Http\Controllers\Api\ComplaintController as UserComplaintController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,6 +21,7 @@ Route::get('/health', function () {
 });
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\User\ComplaintController;
 use App\Http\Controllers\Api\VideoProgressController;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -36,10 +39,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [VideoProgressController::class, 'getAllProgress']);
         Route::post('/{videoId}/complete', [VideoProgressController::class, 'markAsCompleted']);
      });
-     Route::prefix('profile')->group(function(){
+    Route::prefix('profile')->group(function(){
         Route::get('/', [ProfileController::class, 'show']);
         Route::post('/', [ProfileController::class, 'update']);
         Route::post('/change-password', [ProfileController::class, 'changePassword']);
         Route::delete('/image', [ProfileController::class, 'deleteImage']);
      });
+    Route::get('videos/{id}', [VideoManagementController::class, 'show']);  
+
+     //users Complaints
+     
+    Route::post('complaints', [UserComplaintController::class, 'store']);
+    Route::get('my-complaints', [UserComplaintController::class, 'myComplaints']);
+    Route::get('my-complaints/{id}', [UserComplaintController::class, 'show']);
+     Route::post('complaints/{id}/reply', [UserComplaintController::class, 'userReply']);
+
 });

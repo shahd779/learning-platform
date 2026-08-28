@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Teacher\AuthController;
 use App\Http\Controllers\Api\Teacher\CommentController;
 use App\Http\Controllers\Api\Teacher\CourseContentController;
 use App\Http\Controllers\Api\Teacher\FileController;
+use App\Http\Controllers\Api\Teacher\SettingsController;
 use App\Http\Controllers\Api\Teacher\StudentsController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +28,14 @@ Route::prefix('teacher')->group(function(){
         Route::post('videos/{id}/settings', [CourseContentController::class, 'updateVideoSettings']);
         Route::get('videos/pending', [CourseContentController::class, 'getPendingVideos']);
         Route::get('subject-content', [CourseContentController::class, 'getSubjectContent']);
+
+        //course content settings
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingsController::class, 'getSettings']);
+        Route::put('/', [SettingsController::class, 'updateSettings']);
+        Route::get('/options', [SettingsController::class, 'getOptionsApi']);
+
+    });
 
 
         Route::prefix('files')->group(function(){

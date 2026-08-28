@@ -157,7 +157,6 @@ class ComplaintController extends Controller
                         'created_at' => $reply->created_at->format('Y-m-d H:i:s'),
                     ];
                 }),
-                'admin_response' => $complaint->admin_response,
                 'resolved_by' => $complaint->resolvedBy ? [
                     'id' => $complaint->resolvedBy->id,
                     'name' => $complaint->resolvedBy->name,

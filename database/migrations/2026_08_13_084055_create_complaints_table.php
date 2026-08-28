@@ -20,7 +20,6 @@ return new class extends Migration
     $table->text('description');
     $table->string('attachment')->nullable();
     $table->enum('status', ['pending', 'in_progress', 'resolved'])->default('pending');
-    $table->text('admin_response')->nullable();
     $table->foreignId('resolved_by')->nullable()->constrained('users');
     $table->timestamp('resolved_at')->nullable();
     $table->timestamps();

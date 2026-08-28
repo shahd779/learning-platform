@@ -11,17 +11,13 @@ class TeacherSetting extends Model
 
     protected $fillable = [
         'teacher_id',
-        'videos_active_by_default',
         'videos_availability',
         'videos_availability_days',
         'videos_max_watch_count',
-        'files_active_by_default',
         'files_downloadable_by_default',
     ];
 
     protected $casts = [
-        'videos_active_by_default' => 'boolean',
-        'files_active_by_default' => 'boolean',
         'files_downloadable_by_default' => 'boolean',
     ];
 
@@ -34,7 +30,6 @@ class TeacherSetting extends Model
     public function getDefaultVideoSettings()
     {
         return [
-            'is_active' => $this->videos_active_by_default,
             'is_available' => $this->videos_availability === 'always',
             'available_until' => $this->videos_availability === 'limited' 
                 ? now()->addDays($this->videos_availability_days) 
@@ -47,7 +42,6 @@ class TeacherSetting extends Model
     public function getDefaultFileSettings()
     {
         return [
-            'is_active' => $this->files_active_by_default,
             'is_downloadable' => $this->files_downloadable_by_default,
         ];
     }
