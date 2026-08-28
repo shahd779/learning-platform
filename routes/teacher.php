@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Teacher\AuthController;
+use App\Http\Controllers\Api\Teacher\CommentController;
 use App\Http\Controllers\Api\Teacher\CourseContentController;
 use App\Http\Controllers\Api\Teacher\FileController;
 use App\Http\Controllers\Api\Teacher\StudentsController;
@@ -38,6 +39,19 @@ Route::prefix('teacher')->group(function(){
             Route::delete('/{id}', [FileController::class, 'deleteFile']);
 
         });
+        //comments
+        Route::prefix('comments')->group(function () {
+            Route::get('videos-filter', [CommentController::class, 'getAllVideos']);
+            Route::get('/', [CommentController::class, 'index']);
+            Route::get('/video/{videoId}', [CommentController::class, 'getVideoComments']);
+            Route::get('/with-teacher-replies', [CommentController::class, 'getCommentsWithTeacherReplies']);
+            Route::post('/{commentId}/reply', [CommentController::class, 'replyComment']);
+            Route::post('/reply/{replyId}', [CommentController::class, 'updateReply']);
+            Route::get('/{commentId}/replies', [CommentController::class, 'getCommentWithReplies']);
+            Route::delete('/reply/{replyId}', [CommentController::class, 'deleteReply']);
+            Route::delete('/{id}', [CommentController::class, 'deleteComment']);
+            Route::delete('/video/{videoId}', [CommentController::class, 'deleteVideoComments']);
+});
 
 
 

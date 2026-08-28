@@ -28,6 +28,8 @@ class DatabaseSeeder extends Seeder
             StudentSeeder::class,
             PaymentSeeder::class,
             ComplaintSeeder::class,
+            CommentSeeder::class, 
+             VideoSeeder::class,
 
         ]);
     }
