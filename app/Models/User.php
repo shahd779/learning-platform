@@ -33,6 +33,12 @@ class User extends Authenticatable
     // ============= العلاقات =============
 
     // العلاقة بجدول teacher_subject_grade (المدرس)
+
+     public function teacherSubjects()
+    {
+        return $this->hasMany(TeacherSubjectGrade::class, 'teacher_id');
+    }
+
     public function teacherSubjectGrades()
     {
         return $this->hasMany(TeacherSubjectGrade::class, 'teacher_id');

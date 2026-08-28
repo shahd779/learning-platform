@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Models\FileDownload;
 
 class FileController extends Controller
 {
@@ -401,4 +402,28 @@ class FileController extends Controller
             }
         }
     }
+
+
+
+  
+
+public function download($id)
+{
+    $file = File::findOrFail($id);
+    
+    // ✅ تسجيل التحميل
+    FileDownload::create([
+        'file_id' => $file->id,
+        'student_id' => auth()->id(),
+        'downloaded_at' => now(),
+        'ip_address' => request()->ip(),
+        'user_agent' => request()->userAgent(),
+    ]);
+    
+    // ✅ زيادة عدد التحميلات
+    $file->increment('downloads_count');
+    
+    // ✅ تحميل الملف
+    return response()->download(storage_path('app/public/' . $file->file_path));
+}
 }
