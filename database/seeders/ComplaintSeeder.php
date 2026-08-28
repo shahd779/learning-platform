@@ -147,7 +147,6 @@ class ComplaintSeeder extends Seeder
                 'description' => $descriptions[$subjectIndex],
                 'attachment' => rand(0, 1) ? 'complaints/screenshot_' . rand(1, 10) . '.png' : null,
                 'status' => 'resolved',
-                'admin_response' => 'تم حل المشكلة بنجاح، يرجى التأكد من ذلك',
                 'resolved_by' => $admin ? $admin->id : null,
                 'resolved_at' => $resolvedAt,
                 'created_at' => $resolvedAt->copy()->subDays(rand(1, 10)),
