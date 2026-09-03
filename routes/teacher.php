@@ -7,6 +7,10 @@ use App\Http\Controllers\Api\Teacher\FileController;
 use App\Http\Controllers\Api\Teacher\SettingsController;
 use App\Http\Controllers\Api\Teacher\StudentsController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Teacher\DashboardController;
+use App\Http\Controllers\Api\Teacher\ActivityLogController;
+use App\Http\Controllers\Api\Teacher\ExamController;
+
 
 Route::prefix('teacher')->group(function(){
     Route::post('/login', [AuthController::class, 'login']);
@@ -79,7 +83,38 @@ Route::prefix('teacher')->group(function(){
             // ===== Student Results =====
             Route::get('/{id}/results', [StudentsController::class, 'studentResults']);
         });
-       
+
+
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+        
+        // ✅ إحصائيات الرسم البياني (مع فلترة)
+            Route::get('/dashboard/chart', [DashboardController::class, 'chartStats']);
+        
+  
+            Route::get('activity-logs', [ActivityLogController::class, 'index']);
+
+            // ===== Subject Codes (دليل الأكواد) =====
+            Route::get('/subject-codes', [DashboardController::class, 'subjectCodes']);
+            Route::get('/subject-codes/export', [DashboardController::class, 'exportSubjectCodes']);
+
+
+// ===== Exam Management =====
+Route::prefix('exams')->group(function () {
+    Route::get('/', [ExamController::class, 'index']);
+    Route::get('/filter-options', [ExamController::class, 'filterOptions']);
+    Route::get('/create-form-data', [ExamController::class, 'createFormData']);
+    Route::post('/', [ExamController::class, 'store']);
+    Route::get('/{id}', [ExamController::class, 'show']);
+    Route::put('/{id}', [ExamController::class, 'update']);
+    Route::delete('/{id}', [ExamController::class, 'destroy']);
+    Route::post('/{id}/toggle-status', [ExamController::class, 'toggleStatus']);
+});
+
+
+
+
+        
+
     });
 
 });
