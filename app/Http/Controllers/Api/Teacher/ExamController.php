@@ -8,6 +8,7 @@ use App\Models\Exam;
 use App\Models\TeacherSubjectGrade;
 use App\Models\Grade;
 use App\Models\Subject;
+use App\Models\QuestionBank;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
@@ -42,11 +43,6 @@ class ExamController extends Controller
             $query->where('status', $request->status);
         }
 
-        // ✅ فلترة حسب مستوى الصعوبة
-        if ($request->has('difficulty_level') && $request->difficulty_level && $request->difficulty_level !== 'all') {
-            $query->where('difficulty_level', $request->difficulty_level);
-        }
-
         // بحث
         if ($request->has('search') && $request->search) {
             $search = $request->search;
@@ -54,6 +50,12 @@ class ExamController extends Controller
         }
 
         $exams = $query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 15);
+
+        // فك تشفير الأسئلة لكل اختبار
+        $exams->getCollection()->transform(function($exam) {
+            $exam->questions = json_decode($exam->questions, true);
+            return $exam;
+        });
 
         return response()->json([
             'success' => true,
@@ -93,21 +95,12 @@ class ExamController extends Controller
             ['value' => 'scheduled', 'label' => 'مجدول'],
         ];
 
-        // ✅ مستويات الصعوبة
-        $difficultyLevels = [
-            ['value' => 'all', 'label' => 'الكل'],
-            ['value' => 'easy', 'label' => 'سهل'],
-            ['value' => 'medium', 'label' => 'متوسط'],
-            ['value' => 'hard', 'label' => 'صعب'],
-        ];
-
         return response()->json([
             'success' => true,
             'data' => [
                 'grades' => $grades,
                 'subjects' => $subjects,
                 'statuses' => $statuses,
-                'difficulty_levels' => $difficultyLevels,
             ]
         ], 200, [], JSON_UNESCAPED_UNICODE);
     }
@@ -137,7 +130,7 @@ class ExamController extends Controller
             ];
         });
 
-        // ✅ مستويات الصعوبة
+        // ✅ مستويات الصعوبة للأسئلة
         $difficultyLevels = [
             ['value' => 'easy', 'label' => 'سهل', 'color' => 'green'],
             ['value' => 'medium', 'label' => 'متوسط', 'color' => 'yellow'],
@@ -164,7 +157,6 @@ class ExamController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'duration_minutes' => 'nullable|integer|min:1',
-            'difficulty_level' => 'nullable|in:easy,medium,hard',
             'status' => 'required|in:draft,published,scheduled',
             'visibility' => 'nullable|in:all,limited',
             'start_at' => 'required_if:status,scheduled|nullable|date|after:now',
@@ -172,6 +164,7 @@ class ExamController extends Controller
             'questions.*.type' => 'required|in:multiple_choice,true_false,essay',
             'questions.*.question' => 'required|string',
             'questions.*.marks' => 'required|integer|min:1',
+            'questions.*.difficulty' => 'required|in:easy,medium,hard',
             'questions.*.options' => 'required_if:questions.*.type,multiple_choice|array|min:2',
             'questions.*.correct_answer' => 'required_if:questions.*.type,multiple_choice,true_false',
         ]);
@@ -216,7 +209,6 @@ class ExamController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'duration_minutes' => $request->duration_minutes,
-            'difficulty_level' => $request->difficulty_level ?? 'medium',
             'total_marks' => $totalMarks,
             'status' => $request->status,
             'visibility' => $request->visibility ?? 'all',
@@ -286,7 +278,6 @@ class ExamController extends Controller
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'duration_minutes' => 'nullable|integer|min:1',
-            'difficulty_level' => 'nullable|in:easy,medium,hard',
             'status' => 'sometimes|in:draft,published,scheduled',
             'visibility' => 'nullable|in:all,limited',
             'start_at' => 'required_if:status,scheduled|nullable|date|after:now',
@@ -294,6 +285,7 @@ class ExamController extends Controller
             'questions.*.type' => 'required|in:multiple_choice,true_false,essay',
             'questions.*.question' => 'required|string',
             'questions.*.marks' => 'required|integer|min:1',
+            'questions.*.difficulty' => 'required|in:easy,medium,hard',
             'questions.*.options' => 'required_if:questions.*.type,multiple_choice|array|min:2',
             'questions.*.correct_answer' => 'required_if:questions.*.type,multiple_choice,true_false',
         ]);
@@ -305,7 +297,7 @@ class ExamController extends Controller
             ], 422);
         }
 
-        $data = $request->only(['title', 'description', 'duration_minutes', 'status', 'visibility', 'difficulty_level']);
+        $data = $request->only(['title', 'description', 'duration_minutes', 'status', 'visibility']);
 
         // حساب الدرجة الكلية
         if ($request->has('questions')) {
@@ -402,12 +394,6 @@ class ExamController extends Controller
         $publishedExams = Exam::where('teacher_id', $teacher->id)->where('status', 'published')->count();
         $scheduledExams = Exam::where('teacher_id', $teacher->id)->where('status', 'scheduled')->count();
 
-        $difficultyStats = [
-            'easy' => Exam::where('teacher_id', $teacher->id)->where('difficulty_level', 'easy')->count(),
-            'medium' => Exam::where('teacher_id', $teacher->id)->where('difficulty_level', 'medium')->count(),
-            'hard' => Exam::where('teacher_id', $teacher->id)->where('difficulty_level', 'hard')->count(),
-        ];
-
         return response()->json([
             'success' => true,
             'data' => [
@@ -415,7 +401,288 @@ class ExamController extends Controller
                 'draft' => $draftExams,
                 'published' => $publishedExams,
                 'scheduled' => $scheduledExams,
-                'by_difficulty' => $difficultyStats,
+            ]
+        ], 200, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    // ========================================
+    // ✅ بنك الأسئلة (Question Bank)
+    // ========================================
+
+    /**
+     * حفظ سؤال في بنك الأسئلة
+     */
+    public function saveToBank(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'subject_id' => 'required|exists:subjects,id',
+            'grade_id' => 'required|exists:grades,id',
+            'type' => 'required|in:multiple_choice,true_false,essay',
+            'question' => 'required|string',
+            'marks' => 'required|integer|min:1',
+            'difficulty' => 'required|in:easy,medium,hard',
+            'options' => 'required_if:type,multiple_choice|array|min:2',
+            'correct_answer' => 'required_if:type,multiple_choice,true_false',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $teacher = auth()->user();
+
+        // التحقق من أن المدرس بيدرس هذه المادة والصف
+        $teacherSubject = TeacherSubjectGrade::where('teacher_id', $teacher->id)
+            ->where('subject_id', $request->subject_id)
+            ->where('grade_id', $request->grade_id)
+            ->first();
+
+        if (!$teacherSubject) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هذه المادة غير مسجلة لك'
+            ], 403);
+        }
+
+        $question = QuestionBank::create([
+            'teacher_id' => $teacher->id,
+            'subject_id' => $request->subject_id,
+            'grade_id' => $request->grade_id,
+            'type' => $request->type,
+            'question' => $request->question,
+            'marks' => $request->marks,
+            'difficulty' => $request->difficulty,
+            'options' => $request->type === 'multiple_choice' ? json_encode($request->options) : null,
+            'correct_answer' => in_array($request->type, ['multiple_choice', 'true_false']) ? $request->correct_answer : null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حفظ السؤال في بنك الأسئلة بنجاح',
+            'data' => $question,
+        ], 201, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * جلب الأسئلة من بنك الأسئلة (لإضافتها للاختبار)
+     */
+    public function getFromBank(Request $request)
+    {
+        $teacher = auth()->user();
+
+        $query = QuestionBank::where('teacher_id', $teacher->id)
+            ->where('is_active', true);
+
+        // فلترة حسب المادة
+        if ($request->has('subject_id') && $request->subject_id && $request->subject_id !== 'all') {
+            $query->where('subject_id', $request->subject_id);
+        }
+
+        // فلترة حسب الصف
+        if ($request->has('grade_id') && $request->grade_id && $request->grade_id !== 'all') {
+            $query->where('grade_id', $request->grade_id);
+        }
+
+        // فلترة حسب نوع السؤال
+        if ($request->has('type') && $request->type && $request->type !== 'all') {
+            $query->where('type', $request->type);
+        }
+
+        // ✅ فلترة حسب مستوى الصعوبة
+        if ($request->has('difficulty') && $request->difficulty && $request->difficulty !== 'all') {
+            $query->where('difficulty', $request->difficulty);
+        }
+
+        // بحث
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where('question', 'LIKE', '%' . $search . '%');
+        }
+
+        $questions = $query->paginate($request->per_page ?? 20);
+
+        // فك تشفير options
+        $questions->getCollection()->transform(function($item) {
+            if ($item->options) {
+                $item->options = json_decode($item->options, true);
+            }
+            return $item;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $questions,
+        ], 200, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * حذف سؤال من بنك الأسئلة
+     */
+    public function deleteFromBank($id)
+    {
+        $teacher = auth()->user();
+
+        $question = QuestionBank::where('teacher_id', $teacher->id)->find($id);
+
+        if (!$question) {
+            return response()->json([
+                'success' => false,
+                'message' => 'السؤال غير موجود'
+            ], 404);
+        }
+
+        $question->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حذف السؤال من بنك الأسئلة',
+        ], 200, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * إنشاء اختبار من بنك الأسئلة
+     */
+    public function createFromBank(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'teacher_subject_grade_id' => 'required|exists:teacher_subject_grade,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'duration_minutes' => 'nullable|integer|min:1',
+            'status' => 'required|in:draft,published,scheduled',
+            'visibility' => 'nullable|in:all,limited',
+            'start_at' => 'required_if:status,scheduled|nullable|date|after:now',
+            'question_ids' => 'required|array|min:1',
+            'question_ids.*' => 'exists:question_bank,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // جلب المادة للتأكد
+        $teacherSubject = TeacherSubjectGrade::where('id', $request->teacher_subject_grade_id)
+            ->where('teacher_id', auth()->id())
+            ->first();
+
+        if (!$teacherSubject) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هذه المادة غير مسجلة لك'
+            ], 403);
+        }
+
+        // جلب الأسئلة من بنك الأسئلة
+        $questions = QuestionBank::whereIn('id', $request->question_ids)
+            ->where('teacher_id', auth()->id())
+            ->get();
+
+        if ($questions->count() !== count($request->question_ids)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بعض الأسئلة غير موجودة أو لا تخصك'
+            ], 403);
+        }
+
+        // تجهيز الأسئلة للاختبار
+        $examQuestions = $questions->map(function($q) {
+            $data = [
+                'type' => $q->type,
+                'question' => $q->question,
+                'marks' => $q->marks,
+                'difficulty' => $q->difficulty,
+            ];
+
+            if ($q->type === 'multiple_choice') {
+                $data['options'] = json_decode($q->options, true);
+                $data['correct_answer'] = $q->correct_answer;
+            } elseif ($q->type === 'true_false') {
+                $data['correct_answer'] = $q->correct_answer;
+            }
+
+            return $data;
+        })->toArray();
+
+        // حساب الدرجة الكلية
+        $totalMarks = $questions->sum('marks');
+
+        // تحديد تاريخ النشر
+        $startAt = null;
+        if ($request->status === 'scheduled') {
+            $startAt = $request->start_at;
+        } elseif ($request->status === 'published') {
+            $startAt = now();
+        }
+
+        $exam = Exam::create([
+            'teacher_subject_grade_id' => $request->teacher_subject_grade_id,
+            'teacher_id' => auth()->id(),
+            'title' => $request->title,
+            'description' => $request->description,
+            'duration_minutes' => $request->duration_minutes,
+            'total_marks' => $totalMarks,
+            'status' => $request->status,
+            'visibility' => $request->visibility ?? 'all',
+            'start_at' => $startAt,
+            'questions' => json_encode($examQuestions),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إنشاء الاختبار من بنك الأسئلة بنجاح',
+            'data' => $exam->load(['teacherSubjectGrade.subject', 'teacherSubjectGrade.grade']),
+        ], 201, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * جلب مستويات الصعوبة للأسئلة
+     */
+    public function difficultyOptions()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                ['value' => 'easy', 'label' => 'سهل', 'color' => '#10B981'],
+                ['value' => 'medium', 'label' => 'متوسط', 'color' => '#F59E0B'],
+                ['value' => 'hard', 'label' => 'صعب', 'color' => '#EF4444'],
+            ]
+        ], 200, [], JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * جلب إحصائيات بنك الأسئلة
+     */
+    public function bankStats()
+    {
+        $teacher = auth()->user();
+
+        $totalQuestions = QuestionBank::where('teacher_id', $teacher->id)->count();
+        $easyQuestions = QuestionBank::where('teacher_id', $teacher->id)->where('difficulty', 'easy')->count();
+        $mediumQuestions = QuestionBank::where('teacher_id', $teacher->id)->where('difficulty', 'medium')->count();
+        $hardQuestions = QuestionBank::where('teacher_id', $teacher->id)->where('difficulty', 'hard')->count();
+
+        $typeStats = [
+            'multiple_choice' => QuestionBank::where('teacher_id', $teacher->id)->where('type', 'multiple_choice')->count(),
+            'true_false' => QuestionBank::where('teacher_id', $teacher->id)->where('type', 'true_false')->count(),
+            'essay' => QuestionBank::where('teacher_id', $teacher->id)->where('type', 'essay')->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => $totalQuestions,
+                'by_difficulty' => [
+                    'easy' => $easyQuestions,
+                    'medium' => $mediumQuestions,
+                    'hard' => $hardQuestions,
+                ],
+                'by_type' => $typeStats,
             ]
         ], 200, [], JSON_UNESCAPED_UNICODE);
     }

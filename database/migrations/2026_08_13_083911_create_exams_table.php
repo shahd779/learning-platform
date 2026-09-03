@@ -20,7 +20,6 @@ return new class extends Migration
     $table->json('questions')->nullable();
     $table->integer('total_marks');
     $table->integer('duration_minutes')->nullable(); // مدة الاختبار بالدقائق
-    $table->enum('difficulty_level', ['easy', 'medium', 'hard'])->default('medium');
     $table->timestamp('start_at')->nullable();
     $table->timestamp('end_at')->nullable();
     $table->enum('status', ['draft', 'published', 'scheduled'])->default('draft');

@@ -110,6 +110,15 @@ Route::prefix('exams')->group(function () {
     Route::post('/{id}/toggle-status', [ExamController::class, 'toggleStatus']);
 });
 
+// ===== Question Bank =====
+Route::prefix('question-bank')->group(function () {
+    Route::post('/save', [ExamController::class, 'saveToBank']);
+    Route::get('/', [ExamController::class, 'getFromBank']);
+    Route::delete('/{id}', [ExamController::class, 'deleteFromBank']);
+    Route::post('/create-exam', [ExamController::class, 'createFromBank']);
+    Route::get('/difficulty-options', [ExamController::class, 'difficultyOptions']);
+});
+
 
 
 
